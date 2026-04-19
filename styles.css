@@ -1,3 +1,4 @@
+
 :root {
   --bg: #090b10;
   --bg-deep: #05070b;
@@ -279,6 +280,21 @@ select {
   justify-items: end;
 }
 
+.reset-feedback {
+  margin: 14px 0 0;
+  font-size: 0.85rem;
+  color: rgba(245, 247, 251, 0.72);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.reset-feedback.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .plan-exercises {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -340,6 +356,47 @@ select {
   gap: 6px;
 }
 
+.plan-progress-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.plan-progress-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.plan-progress-label {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #9aa7ba;
+}
+
+.plan-progress-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 0;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.plan-progress-badge.is-better {
+  color: #22c55e;
+}
+
+.plan-progress-badge.is-worse {
+  color: #ef4444;
+}
+
+.plan-progress-badge.is-equal {
+  color: #9ca3af;
+}
+
 .plan-history-item,
 .plan-history-empty {
   margin: 0;
@@ -349,6 +406,30 @@ select {
 
 .plan-history-empty {
   color: #7f8ba0;
+}
+
+.plan-chart-section {
+  margin-top: 18px;
+}
+
+.plan-chart-section.is-hidden {
+  display: none;
+}
+
+.plan-chart-title {
+  margin: 0 0 10px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #c8d2df;
+}
+
+.plan-chart-wrapper {
+  position: relative;
+  min-height: 220px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .plan-set-row {
