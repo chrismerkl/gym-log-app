@@ -168,11 +168,59 @@ select {
   overflow: hidden;
 }
 
+.personalization-panel {
+  position: relative;
+}
+
+.personalization-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 22px;
+  align-items: start;
+}
+
+.theme-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.theme-swatch {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.theme-swatch:hover {
+  transform: translateY(-1px);
+}
+
+.theme-swatch.active {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 22%, transparent);
+}
+
 .day-tabs {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   margin-top: 22px;
+}
+
+.plan-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) 120px 140px auto;
+  gap: 14px;
+  margin-top: 22px;
+  align-items: end;
+}
+
+.plan-form-button {
+  min-height: 56px;
 }
 
 .day-tab {
@@ -225,6 +273,12 @@ select {
   text-align: right;
 }
 
+.day-actions {
+  display: grid;
+  gap: 12px;
+  justify-items: end;
+}
+
 .plan-exercises {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -245,6 +299,7 @@ select {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  align-items: start;
 }
 
 .plan-exercise-name {
@@ -260,11 +315,60 @@ select {
   font-weight: 600;
 }
 
-.plan-inputs {
+.plan-set-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
   margin-top: 18px;
+}
+
+.plan-history {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: #aab6c8;
+}
+
+.plan-history-title {
+  margin: 0 0 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #c8d2df;
+}
+
+.plan-history-list {
+  display: grid;
+  gap: 6px;
+}
+
+.plan-history-item,
+.plan-history-empty {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.plan-history-empty {
+  color: #7f8ba0;
+}
+
+.plan-set-row {
+  display: grid;
+  grid-template-columns: 110px repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.plan-set-label {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 56px;
+  font-weight: 700;
+  color: #ffcfab;
 }
 
 .panel-heading h2,
@@ -527,12 +631,21 @@ select {
     text-align: left;
   }
 
+  .day-actions {
+    justify-items: start;
+  }
+
+  .personalization-form,
+  .plan-form,
   .grid-form {
     grid-template-columns: 1fr;
   }
 
-  .plan-exercises,
-  .plan-inputs {
+  .plan-exercises {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-set-row {
     grid-template-columns: 1fr;
   }
 
