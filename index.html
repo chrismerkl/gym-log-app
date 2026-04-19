@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -101,6 +102,7 @@
           </button>
         </div>
       </div>
+      <p id="reset-feedback" class="reset-feedback" aria-live="polite">Übung zurückgesetzt</p>
       <div id="plan-exercises" class="plan-exercises" aria-live="polite"></div>
     </section>
 
@@ -212,9 +214,16 @@
       </div>
       <div class="plan-set-list"></div>
       <div class="plan-history"></div>
+      <div class="plan-chart-section">
+        <p class="plan-chart-title">Verlauf</p>
+        <div class="plan-chart-wrapper">
+          <canvas class="plan-chart"></canvas>
+        </div>
+      </div>
     </article>
   </template>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
