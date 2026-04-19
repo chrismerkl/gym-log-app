@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   trainingPlanStructure: "gym-log-training-plan-structure",
   trainingPlanCurrentData: "gym-log-training-plan-current-data",
   trainingPlanLastData: "gym-log-training-plan-last-data",
+  trainingHistory: "gym-log-training-history",
   legacyTrainingPlanData: "gym-log-training-plan",
   personalization: "gym-log-personalization",
 };
@@ -135,6 +136,7 @@ const personalizationForm = document.querySelector("#personalization-form");
 const profileNameInput = document.querySelector("#profile-name-input");
 const themeOptions = document.querySelector("#theme-options");
 const completeTrainingButton = document.querySelector("#complete-training-button");
+const resetFeedback = document.querySelector("#reset-feedback");
 
 function readStorage(key, fallback) {
   const rawValue = localStorage.getItem(key);
@@ -166,11 +168,14 @@ let planCurrentEntries = readStorage(
   readStorage(STORAGE_KEYS.legacyTrainingPlanData, {}),
 );
 let planLastEntries = readStorage(STORAGE_KEYS.trainingPlanLastData, {});
+let trainingHistory = readStorage(STORAGE_KEYS.trainingHistory, []);
 let activeTrainingDay = DEFAULT_TRAINING_DAYS[0].id;
 let personalization = readStorage(STORAGE_KEYS.personalization, {
   name: "",
   theme: THEMES[0].id,
 });
+const chartInstances = new Map();
+let resetFeedbackTimeoutId = null;
 
 if (!Array.isArray(exercises) || exercises.length === 0) {
   exercises = [...defaultExercises];
@@ -186,6 +191,10 @@ if (!planCurrentEntries || typeof planCurrentEntries !== "object" || Array.isArr
 
 if (!planLastEntries || typeof planLastEntries !== "object" || Array.isArray(planLastEntries)) {
   planLastEntries = {};
+}
+
+if (!Array.isArray(trainingHistory)) {
+  trainingHistory = [];
 }
 
 if (!Array.isArray(planDays) || planDays.length === 0) {
@@ -210,6 +219,10 @@ function saveLastPlanData() {
   saveStorage(STORAGE_KEYS.trainingPlanLastData, planLastEntries);
 }
 
+function saveTrainingHistory() {
+  saveStorage(STORAGE_KEYS.trainingHistory, trainingHistory);
+}
+
 function savePersonalization() {
   saveStorage(STORAGE_KEYS.personalization, personalization);
 }
@@ -223,8 +236,39 @@ function formatDate(dateString) {
   }).format(date);
 }
 
+function formatHistoryDate(dateString) {
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateString;
+  }
+
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(date);
+}
+
+function getTodayDate() {
+  return new Date().toISOString().split("T")[0];
+}
+
 function getTrainingDay(dayId) {
   return planDays.find((day) => day.id === dayId) ?? planDays[0];
+}
+
+function getDefaultTrainingDay(dayId) {
+  return DEFAULT_TRAINING_DAYS.find((day) => day.id === dayId) ?? null;
+}
+
+function getDefaultExercise(dayId, exerciseName) {
+  const defaultDay = getDefaultTrainingDay(dayId);
+
+  if (!defaultDay) {
+    return null;
+  }
+
+  return defaultDay.exercises.find((exercise) => exercise.name === exerciseName) ?? null;
 }
 
 function getCurrentPlanEntry(dayId, exerciseName) {
@@ -259,6 +303,112 @@ function normalizePlanEntry(exercise, entry) {
   };
 }
 
+function getExerciseHistory(exerciseName) {
+  return trainingHistory
+    .filter((entry) => entry.uebung === exerciseName && Array.isArray(entry.saetze))
+    .sort((a, b) => new Date(a.datum) - new Date(b.datum));
+}
+
+function getStoredTrainingHistory() {
+  trainingHistory = readStorage(STORAGE_KEYS.trainingHistory, trainingHistory);
+  return Array.isArray(trainingHistory) ? trainingHistory : [];
+}
+
+function getBestWeightFromSets(sets) {
+  const numericWeights = sets
+    .map((setEntry) => Number.parseFloat(setEntry.gewicht))
+    .filter((weight) => !Number.isNaN(weight));
+
+  if (numericWeights.length === 0) {
+    return null;
+  }
+
+  return Math.max(...numericWeights);
+}
+
+function destroyPlanCharts() {
+  chartInstances.forEach((chart) => chart.destroy());
+  chartInstances.clear();
+}
+
+function renderExerciseChart(canvas, exerciseName) {
+  const chartSection = canvas.closest(".plan-chart-section");
+  const chartWrapper = canvas.closest(".plan-chart-wrapper");
+  const history = getStoredTrainingHistory()
+    .filter((entry) => entry.uebung === exerciseName && Array.isArray(entry.saetze))
+    .sort((a, b) => new Date(a.datum) - new Date(b.datum));
+  const chartData = history
+    .map((entry) => ({
+      datum: formatHistoryDate(entry.datum),
+      bestesGewicht: getBestWeightFromSets(entry.saetze),
+    }))
+    .filter((entry) => entry.bestesGewicht !== null);
+
+  if (chartData.length === 0 || typeof Chart === "undefined") {
+    chartSection.classList.add("is-hidden");
+    return;
+  }
+
+  chartSection.classList.remove("is-hidden");
+
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    chartSection.classList.add("is-hidden");
+    return;
+  }
+
+  const chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: chartData.map((entry) => entry.datum),
+      datasets: [
+        {
+          label: "Gewicht",
+          data: chartData.map((entry) => entry.bestesGewicht),
+          borderColor: getComputedStyle(document.documentElement).getPropertyValue("--brand").trim(),
+          backgroundColor: "rgba(249,115,22,0.2)",
+          borderWidth: 3,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 5,
+          pointBackgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--brand").trim(),
+          pointBorderWidth: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: "#9ca3af",
+          },
+          grid: {
+            color: "rgba(255, 255, 255, 0.05)",
+          },
+        },
+        y: {
+          ticks: {
+            color: "#9ca3af",
+          },
+          grid: {
+            color: "rgba(255, 255, 255, 0.05)",
+          },
+        },
+      },
+    },
+  });
+
+  chartInstances.set(canvas, chart);
+}
+
 function savePlanField(dayId, exercise, setIndex, field, value) {
   if (!planCurrentEntries[dayId]) {
     planCurrentEntries[dayId] = {};
@@ -275,7 +425,42 @@ function savePlanField(dayId, exercise, setIndex, field, value) {
   saveCurrentPlanData();
 }
 
-function renderPlanHistory(container, savedValues) {
+function berechneFortschritt(alt, neu) {
+  const altesGewicht = Number.parseFloat(alt.weight);
+  const neuesGewicht = Number.parseFloat(neu.weight);
+  const alteWdh = Number.parseInt(alt.reps, 10);
+  const neueWdh = Number.parseInt(neu.reps, 10);
+
+  if (!Number.isNaN(altesGewicht) && !Number.isNaN(neuesGewicht)) {
+    const differenzGewicht = Number((neuesGewicht - altesGewicht).toFixed(2));
+
+    if (differenzGewicht > 0) {
+      return { text: `🔼 +${differenzGewicht} kg`, color: "better" };
+    }
+
+    if (differenzGewicht < 0) {
+      return { text: `🔽 ${differenzGewicht} kg`, color: "worse" };
+    }
+  }
+
+  if (!Number.isNaN(alteWdh) && !Number.isNaN(neueWdh)) {
+    const differenzWdh = neueWdh - alteWdh;
+
+    if (differenzWdh > 0) {
+      return { text: `🔼 +${differenzWdh} Wdh`, color: "better" };
+    }
+
+    if (differenzWdh < 0) {
+      return { text: `🔽 ${differenzWdh} Wdh`, color: "worse" };
+    }
+
+    return { text: "➖ Gleich", color: "equal" };
+  }
+
+  return null;
+}
+
+function renderPlanHistory(container, lastValues, currentValues) {
   container.innerHTML = "";
 
   const title = document.createElement("p");
@@ -283,7 +468,7 @@ function renderPlanHistory(container, savedValues) {
   title.textContent = "Letztes Training";
   container.append(title);
 
-  const filledSets = savedValues.sets.filter(
+  const filledSets = lastValues.sets.filter(
     (setEntry) => setEntry.weight !== "" || setEntry.reps !== "",
   );
 
@@ -298,7 +483,7 @@ function renderPlanHistory(container, savedValues) {
   const historyList = document.createElement("div");
   historyList.className = "plan-history-list";
 
-  savedValues.sets.forEach((setEntry, index) => {
+  lastValues.sets.forEach((setEntry, index) => {
     if (setEntry.weight === "" && setEntry.reps === "") {
       return;
     }
@@ -310,6 +495,42 @@ function renderPlanHistory(container, savedValues) {
   });
 
   container.append(historyList);
+
+  const progressList = document.createElement("div");
+  progressList.className = "plan-progress-list";
+
+  currentValues.sets.forEach((currentSet, index) => {
+    const lastSet = lastValues.sets[index];
+
+    if (!lastSet || (lastSet.weight === "" && lastSet.reps === "")) {
+      return;
+    }
+
+    const fortschritt = berechneFortschritt(lastSet, currentSet);
+
+    if (!fortschritt) {
+      return;
+    }
+
+    const progressItem = document.createElement("div");
+    progressItem.className = "plan-progress-item";
+
+    const label = document.createElement("p");
+    label.className = "plan-progress-label";
+    label.textContent = `Fortschritt Satz ${index + 1}:`;
+    progressItem.append(label);
+
+    const badge = document.createElement("span");
+    badge.className = `plan-progress-badge is-${fortschritt.color}`;
+    badge.textContent = fortschritt.text;
+    progressItem.append(badge);
+
+    progressList.append(progressItem);
+  });
+
+  if (progressList.childElementCount > 0) {
+    container.append(progressList);
+  }
 }
 
 function getTheme(themeId) {
@@ -352,6 +573,26 @@ function renderPersonalization() {
   profileNameInput.value = personalization.name ?? "";
   applyTheme(personalization.theme);
   renderThemeOptions();
+
+  if (planExercises.childElementCount > 0) {
+    renderTrainingPlan();
+  }
+}
+
+function showResetFeedback() {
+  if (!resetFeedback) {
+    return;
+  }
+
+  resetFeedback.classList.add("is-visible");
+
+  if (resetFeedbackTimeoutId) {
+    clearTimeout(resetFeedbackTimeoutId);
+  }
+
+  resetFeedbackTimeoutId = setTimeout(() => {
+    resetFeedback.classList.remove("is-visible");
+  }, 2000);
 }
 
 function renderDayTabs() {
@@ -377,6 +618,7 @@ function renderTrainingPlan() {
 
   activeDayLabel.textContent = "Aktiver Trainingstag";
   activeDayTitle.textContent = activeDay.label;
+  destroyPlanCharts();
   planExercises.innerHTML = "";
 
   activeDay.exercises.forEach((exercise) => {
@@ -384,6 +626,7 @@ function renderTrainingPlan() {
     const setList = fragment.querySelector(".plan-set-list");
     const deleteButton = fragment.querySelector(".plan-delete-button");
     const historyBlock = fragment.querySelector(".plan-history");
+    const chartCanvas = fragment.querySelector(".plan-chart");
     const currentValues = normalizePlanEntry(exercise, getCurrentPlanEntry(activeDay.id, exercise.name));
     const lastValues = normalizePlanEntry(exercise, getLastPlanEntry(activeDay.id, exercise.name));
 
@@ -434,8 +677,9 @@ function renderTrainingPlan() {
       setList.append(row);
     });
 
-    renderPlanHistory(historyBlock, lastValues);
+    renderPlanHistory(historyBlock, lastValues, currentValues);
     planExercises.append(fragment);
+    requestAnimationFrame(() => renderExerciseChart(chartCanvas, exercise.name));
   });
 }
 
@@ -466,9 +710,25 @@ function completeTrainingDay(dayId) {
         reps: setEntry.reps,
       })),
     };
+
+    trainingHistory.push({
+      uebung: exercise.name,
+      datum: getTodayDate(),
+      saetze: currentValues.sets.map((setEntry) => ({
+        gewicht: Number.parseFloat(setEntry.weight),
+        wdh: Number.parseInt(setEntry.reps, 10),
+      })),
+    });
   });
 
   saveLastPlanData();
+  saveTrainingHistory();
+
+  if (planCurrentEntries[dayId]) {
+    delete planCurrentEntries[dayId];
+    saveCurrentPlanData();
+  }
+
   renderTrainingPlan();
 }
 
@@ -510,12 +770,23 @@ function addPlanExercise(dayId, exercise) {
 
 function deletePlanExercise(dayId, exerciseName) {
   const day = getTrainingDay(dayId);
+  const defaultExercise = getDefaultExercise(dayId, exerciseName);
 
   if (!day) {
     return;
   }
 
-  day.exercises = day.exercises.filter((exercise) => exercise.name !== exerciseName);
+  if (defaultExercise) {
+    day.exercises = day.exercises.map((exercise) => {
+      if (exercise.name !== exerciseName) {
+        return exercise;
+      }
+
+      return structuredClone(defaultExercise);
+    });
+  } else {
+    day.exercises = day.exercises.filter((exercise) => exercise.name !== exerciseName);
+  }
 
   if (planCurrentEntries[dayId]?.[exerciseName]) {
     delete planCurrentEntries[dayId][exerciseName];
@@ -527,8 +798,12 @@ function deletePlanExercise(dayId, exerciseName) {
     saveLastPlanData();
   }
 
+  trainingHistory = trainingHistory.filter((entry) => entry.uebung !== exerciseName);
+  saveTrainingHistory();
+
   savePlanStructure();
   renderTrainingPlan();
+  showResetFeedback();
 }
 
 function renderExercises() {
@@ -730,6 +1005,7 @@ planExercises.addEventListener("input", (event) => {
   renderPlanHistory(
     card.querySelector(".plan-history"),
     normalizePlanEntry(exercise, getLastPlanEntry(input.dataset.day, input.dataset.exercise)),
+    normalizePlanEntry(exercise, getCurrentPlanEntry(input.dataset.day, input.dataset.exercise)),
   );
 });
 
