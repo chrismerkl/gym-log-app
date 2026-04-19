@@ -1,8 +1,56 @@
+
 const STORAGE_KEYS = {
   exercises: "gym-log-exercises",
   logs: "gym-log-entries",
-  trainingPlan: "gym-log-training-plan",
+  trainingPlanStructure: "gym-log-training-plan-structure",
+  trainingPlanCurrentData: "gym-log-training-plan-current-data",
+  trainingPlanLastData: "gym-log-training-plan-last-data",
+  legacyTrainingPlanData: "gym-log-training-plan",
+  personalization: "gym-log-personalization",
 };
+
+const THEMES = [
+  {
+    id: "orange",
+    label: "Orange",
+    brand: "#ff7a1a",
+    brandDark: "#d85f06",
+    brandSoft: "rgba(255, 122, 26, 0.16)",
+    swatch: "linear-gradient(135deg, #ffb26c, #ff7a1a)",
+  },
+  {
+    id: "blue",
+    label: "Blau",
+    brand: "#52a7ff",
+    brandDark: "#2f7fda",
+    brandSoft: "rgba(82, 167, 255, 0.18)",
+    swatch: "linear-gradient(135deg, #8dc7ff, #4f99ff)",
+  },
+  {
+    id: "green",
+    label: "Gruen",
+    brand: "#52d98c",
+    brandDark: "#2ba968",
+    brandSoft: "rgba(82, 217, 140, 0.18)",
+    swatch: "linear-gradient(135deg, #91f0b6, #46c97b)",
+  },
+  {
+    id: "red",
+    label: "Rot",
+    brand: "#ff6b6b",
+    brandDark: "#d94a4a",
+    brandSoft: "rgba(255, 107, 107, 0.18)",
+    swatch: "linear-gradient(135deg, #ff9f9f, #ff6b6b)",
+  },
+  {
+    id: "violet",
+    label: "Violett",
+    brand: "#a978ff",
+    brandDark: "#8056d8",
+    brandSoft: "rgba(169, 120, 255, 0.18)",
+    swatch: "linear-gradient(135deg, #caabff, #9b68ff)",
+  },
+];
 
 const defaultExercises = [
   "Bankdrücken",
@@ -11,7 +59,7 @@ const defaultExercises = [
   "Schulterdrücken",
 ];
 
-const trainingDays = [
+const DEFAULT_TRAINING_DAYS = [
   {
     id: "torso-a",
     label: "Torso A",
@@ -78,6 +126,15 @@ const activeDayLabel = document.querySelector("#active-day-label");
 const activeDayTitle = document.querySelector("#active-day-title");
 const planExercises = document.querySelector("#plan-exercises");
 const planExerciseTemplate = document.querySelector("#plan-exercise-template");
+const planForm = document.querySelector("#plan-form");
+const planExerciseNameInput = document.querySelector("#plan-exercise-name");
+const planExerciseSetsInput = document.querySelector("#plan-exercise-sets");
+const planExerciseRepsInput = document.querySelector("#plan-exercise-reps");
+const profileNameDisplay = document.querySelector("#profile-name-display");
+const personalizationForm = document.querySelector("#personalization-form");
+const profileNameInput = document.querySelector("#profile-name-input");
+const themeOptions = document.querySelector("#theme-options");
+const completeTrainingButton = document.querySelector("#complete-training-button");
 
 function readStorage(key, fallback) {
   const rawValue = localStorage.getItem(key);
@@ -100,8 +157,20 @@ function saveStorage(key, value) {
 
 let exercises = readStorage(STORAGE_KEYS.exercises, defaultExercises);
 let logs = readStorage(STORAGE_KEYS.logs, []);
-let planEntries = readStorage(STORAGE_KEYS.trainingPlan, {});
-let activeTrainingDay = trainingDays[0].id;
+let planDays = readStorage(
+  STORAGE_KEYS.trainingPlanStructure,
+  structuredClone(DEFAULT_TRAINING_DAYS),
+);
+let planCurrentEntries = readStorage(
+  STORAGE_KEYS.trainingPlanCurrentData,
+  readStorage(STORAGE_KEYS.legacyTrainingPlanData, {}),
+);
+let planLastEntries = readStorage(STORAGE_KEYS.trainingPlanLastData, {});
+let activeTrainingDay = DEFAULT_TRAINING_DAYS[0].id;
+let personalization = readStorage(STORAGE_KEYS.personalization, {
+  name: "",
+  theme: THEMES[0].id,
+});
 
 if (!Array.isArray(exercises) || exercises.length === 0) {
   exercises = [...defaultExercises];
@@ -111,8 +180,38 @@ if (!Array.isArray(logs)) {
   logs = [];
 }
 
-if (!planEntries || typeof planEntries !== "object" || Array.isArray(planEntries)) {
-  planEntries = {};
+if (!planCurrentEntries || typeof planCurrentEntries !== "object" || Array.isArray(planCurrentEntries)) {
+  planCurrentEntries = {};
+}
+
+if (!planLastEntries || typeof planLastEntries !== "object" || Array.isArray(planLastEntries)) {
+  planLastEntries = {};
+}
+
+if (!Array.isArray(planDays) || planDays.length === 0) {
+  planDays = structuredClone(DEFAULT_TRAINING_DAYS);
+}
+
+if (!personalization || typeof personalization !== "object" || Array.isArray(personalization)) {
+  personalization = { name: "", theme: THEMES[0].id };
+}
+
+activeTrainingDay = getTrainingDay(activeTrainingDay).id;
+
+function savePlanStructure() {
+  saveStorage(STORAGE_KEYS.trainingPlanStructure, planDays);
+}
+
+function saveCurrentPlanData() {
+  saveStorage(STORAGE_KEYS.trainingPlanCurrentData, planCurrentEntries);
+}
+
+function saveLastPlanData() {
+  saveStorage(STORAGE_KEYS.trainingPlanLastData, planLastEntries);
+}
+
+function savePersonalization() {
+  saveStorage(STORAGE_KEYS.personalization, personalization);
 }
 
 function formatDate(dateString) {
@@ -125,31 +224,140 @@ function formatDate(dateString) {
 }
 
 function getTrainingDay(dayId) {
-  return trainingDays.find((day) => day.id === dayId) ?? trainingDays[0];
+  return planDays.find((day) => day.id === dayId) ?? planDays[0];
 }
 
-function getPlanEntry(dayId, exerciseName) {
-  return planEntries[dayId]?.[exerciseName] ?? { weight: "", reps: "" };
+function getCurrentPlanEntry(dayId, exerciseName) {
+  return planCurrentEntries[dayId]?.[exerciseName] ?? { sets: [] };
 }
 
-function savePlanField(dayId, exerciseName, field, value) {
-  if (!planEntries[dayId]) {
-    planEntries[dayId] = {};
+function getLastPlanEntry(dayId, exerciseName) {
+  return planLastEntries[dayId]?.[exerciseName] ?? { sets: [] };
+}
+
+function getSetCount(exercise) {
+  return Number.parseInt(exercise.sets, 10) || 1;
+}
+
+function normalizePlanEntry(exercise, entry) {
+  const setCount = getSetCount(exercise);
+
+  if (entry && Array.isArray(entry.sets)) {
+    return {
+      sets: Array.from({ length: setCount }, (_, index) => ({
+        weight: entry.sets[index]?.weight ?? "",
+        reps: entry.sets[index]?.reps ?? "",
+      })),
+    };
   }
 
-  const currentEntry = planEntries[dayId][exerciseName] ?? { weight: "", reps: "" };
-  planEntries[dayId][exerciseName] = {
-    ...currentEntry,
+  return {
+    sets: Array.from({ length: setCount }, (_, index) => ({
+      weight: index === 0 ? entry?.weight ?? "" : "",
+      reps: index === 0 ? entry?.reps ?? "" : "",
+    })),
+  };
+}
+
+function savePlanField(dayId, exercise, setIndex, field, value) {
+  if (!planCurrentEntries[dayId]) {
+    planCurrentEntries[dayId] = {};
+  }
+
+  const normalizedEntry = normalizePlanEntry(exercise, planCurrentEntries[dayId][exercise.name]);
+  normalizedEntry.sets[setIndex] = {
+    ...normalizedEntry.sets[setIndex],
     [field]: value,
   };
 
-  saveStorage(STORAGE_KEYS.trainingPlan, planEntries);
+  planCurrentEntries[dayId][exercise.name] = normalizedEntry;
+
+  saveCurrentPlanData();
+}
+
+function renderPlanHistory(container, savedValues) {
+  container.innerHTML = "";
+
+  const title = document.createElement("p");
+  title.className = "plan-history-title";
+  title.textContent = "Letztes Training";
+  container.append(title);
+
+  const filledSets = savedValues.sets.filter(
+    (setEntry) => setEntry.weight !== "" || setEntry.reps !== "",
+  );
+
+  if (filledSets.length === 0) {
+    const emptyText = document.createElement("p");
+    emptyText.className = "plan-history-empty";
+    emptyText.textContent = "Noch kein letztes Training gespeichert.";
+    container.append(emptyText);
+    return;
+  }
+
+  const historyList = document.createElement("div");
+  historyList.className = "plan-history-list";
+
+  savedValues.sets.forEach((setEntry, index) => {
+    if (setEntry.weight === "" && setEntry.reps === "") {
+      return;
+    }
+
+    const item = document.createElement("p");
+    item.className = "plan-history-item";
+    item.textContent = `Satz ${index + 1}: ${setEntry.weight || "-"}kg x ${setEntry.reps || "-"}`;
+    historyList.append(item);
+  });
+
+  container.append(historyList);
+}
+
+function getTheme(themeId) {
+  return THEMES.find((theme) => theme.id === themeId) ?? THEMES[0];
+}
+
+function applyTheme(themeId) {
+  const theme = getTheme(themeId);
+  const root = document.documentElement;
+
+  root.style.setProperty("--brand", theme.brand);
+  root.style.setProperty("--brand-dark", theme.brandDark);
+  root.style.setProperty("--brand-soft", theme.brandSoft);
+}
+
+function renderThemeOptions() {
+  themeOptions.innerHTML = "";
+
+  THEMES.forEach((theme) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "theme-swatch";
+    button.dataset.theme = theme.id;
+    button.title = theme.label;
+    button.setAttribute("aria-label", theme.label);
+    button.style.background = theme.swatch;
+
+    if (theme.id === personalization.theme) {
+      button.classList.add("active");
+    }
+
+    themeOptions.append(button);
+  });
+}
+
+function renderPersonalization() {
+  const displayName = personalization.name.trim() || "Gym Log MVP";
+
+  profileNameDisplay.textContent = displayName;
+  profileNameInput.value = personalization.name ?? "";
+  applyTheme(personalization.theme);
+  renderThemeOptions();
 }
 
 function renderDayTabs() {
   dayTabs.innerHTML = "";
 
-  trainingDays.forEach((day) => {
+  planDays.forEach((day) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "button day-tab";
@@ -173,24 +381,154 @@ function renderTrainingPlan() {
 
   activeDay.exercises.forEach((exercise) => {
     const fragment = planExerciseTemplate.content.cloneNode(true);
-    const weightField = fragment.querySelector(".plan-weight-input");
-    const repsField = fragment.querySelector(".plan-reps-input");
-    const savedValues = getPlanEntry(activeDay.id, exercise.name);
+    const setList = fragment.querySelector(".plan-set-list");
+    const deleteButton = fragment.querySelector(".plan-delete-button");
+    const historyBlock = fragment.querySelector(".plan-history");
+    const currentValues = normalizePlanEntry(exercise, getCurrentPlanEntry(activeDay.id, exercise.name));
+    const lastValues = normalizePlanEntry(exercise, getLastPlanEntry(activeDay.id, exercise.name));
 
     fragment.querySelector(".plan-exercise-name").textContent = exercise.name;
     fragment.querySelector(".plan-prescription").textContent = `${exercise.sets} ${exercise.reps}`;
+    deleteButton.dataset.day = activeDay.id;
+    deleteButton.dataset.exercise = exercise.name;
 
-    weightField.value = savedValues.weight ?? "";
-    repsField.value = savedValues.reps ?? "";
-    weightField.dataset.day = activeDay.id;
-    weightField.dataset.exercise = exercise.name;
-    weightField.dataset.field = "weight";
-    repsField.dataset.day = activeDay.id;
-    repsField.dataset.exercise = exercise.name;
-    repsField.dataset.field = "reps";
+    currentValues.sets.forEach((setEntry, index) => {
+      const row = document.createElement("div");
+      row.className = "plan-set-row";
 
+      const setLabel = document.createElement("p");
+      setLabel.className = "plan-set-label";
+      setLabel.textContent = `Satz ${index + 1}`;
+
+      const weightLabel = document.createElement("label");
+      weightLabel.className = "field";
+      weightLabel.innerHTML = `
+        <span>Gewicht (kg)</span>
+        <input class="plan-set-input" type="number" min="0" step="0.5" placeholder="z. B. 22.5">
+      `;
+
+      const repsLabel = document.createElement("label");
+      repsLabel.className = "field";
+      repsLabel.innerHTML = `
+        <span>Wiederholungen</span>
+        <input class="plan-set-input" type="number" min="0" step="1" placeholder="z. B. 8">
+      `;
+
+      const weightField = weightLabel.querySelector("input");
+      const repsField = repsLabel.querySelector("input");
+
+      weightField.value = setEntry.weight ?? "";
+      repsField.value = setEntry.reps ?? "";
+
+      weightField.dataset.day = activeDay.id;
+      weightField.dataset.exercise = exercise.name;
+      weightField.dataset.setIndex = String(index);
+      weightField.dataset.field = "weight";
+
+      repsField.dataset.day = activeDay.id;
+      repsField.dataset.exercise = exercise.name;
+      repsField.dataset.setIndex = String(index);
+      repsField.dataset.field = "reps";
+
+      row.append(setLabel, weightLabel, repsLabel);
+      setList.append(row);
+    });
+
+    renderPlanHistory(historyBlock, lastValues);
     planExercises.append(fragment);
   });
+}
+
+function completeTrainingDay(dayId) {
+  const day = getTrainingDay(dayId);
+
+  if (!day) {
+    return;
+  }
+
+  if (!planLastEntries[dayId]) {
+    planLastEntries[dayId] = {};
+  }
+
+  day.exercises.forEach((exercise) => {
+    const currentValues = normalizePlanEntry(exercise, getCurrentPlanEntry(dayId, exercise.name));
+    const hasData = currentValues.sets.some(
+      (setEntry) => setEntry.weight !== "" || setEntry.reps !== "",
+    );
+
+    if (!hasData) {
+      return;
+    }
+
+    planLastEntries[dayId][exercise.name] = {
+      sets: currentValues.sets.map((setEntry) => ({
+        weight: setEntry.weight,
+        reps: setEntry.reps,
+      })),
+    };
+  });
+
+  saveLastPlanData();
+  renderTrainingPlan();
+}
+
+function addPlanExercise(dayId, exercise) {
+  const day = getTrainingDay(dayId);
+
+  if (!day) {
+    return;
+  }
+
+  const trimmedName = exercise.name.trim();
+  const trimmedReps = exercise.reps.trim() || "6-10";
+
+  if (!trimmedName) {
+    return;
+  }
+
+  const exists = day.exercises.some(
+    (item) => item.name.toLowerCase() === trimmedName.toLowerCase(),
+  );
+
+  if (exists) {
+    alert("Diese Übung ist im Trainingsplan bereits vorhanden.");
+    return;
+  }
+
+  day.exercises = [
+    ...day.exercises,
+    {
+      name: trimmedName,
+      sets: exercise.sets,
+      reps: trimmedReps,
+    },
+  ];
+
+  savePlanStructure();
+  renderTrainingPlan();
+}
+
+function deletePlanExercise(dayId, exerciseName) {
+  const day = getTrainingDay(dayId);
+
+  if (!day) {
+    return;
+  }
+
+  day.exercises = day.exercises.filter((exercise) => exercise.name !== exerciseName);
+
+  if (planCurrentEntries[dayId]?.[exerciseName]) {
+    delete planCurrentEntries[dayId][exerciseName];
+    saveCurrentPlanData();
+  }
+
+  if (planLastEntries[dayId]?.[exerciseName]) {
+    delete planLastEntries[dayId][exerciseName];
+    saveLastPlanData();
+  }
+
+  savePlanStructure();
+  renderTrainingPlan();
 }
 
 function renderExercises() {
@@ -320,6 +658,31 @@ progressList.addEventListener("click", (event) => {
   deleteLogEntry(deleteButton.dataset.id);
 });
 
+planForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  addPlanExercise(activeTrainingDay, {
+    name: planExerciseNameInput.value,
+    sets: planExerciseSetsInput.value,
+    reps: planExerciseRepsInput.value,
+  });
+
+  planForm.reset();
+  planExerciseSetsInput.value = "3x";
+  planExerciseRepsInput.value = "6-10";
+  planExerciseNameInput.focus();
+});
+
+personalizationForm.addEventListener("input", (event) => {
+  if (event.target !== profileNameInput) {
+    return;
+  }
+
+  personalization.name = profileNameInput.value;
+  savePersonalization();
+  renderPersonalization();
+});
+
 dayTabs.addEventListener("click", (event) => {
   const dayButton = event.target.closest(".day-tab");
 
@@ -332,6 +695,10 @@ dayTabs.addEventListener("click", (event) => {
   renderTrainingPlan();
 });
 
+completeTrainingButton.addEventListener("click", () => {
+  completeTrainingDay(activeTrainingDay);
+});
+
 planExercises.addEventListener("input", (event) => {
   const input = event.target.closest("input");
 
@@ -339,9 +706,56 @@ planExercises.addEventListener("input", (event) => {
     return;
   }
 
-  savePlanField(input.dataset.day, input.dataset.exercise, input.dataset.field, input.value);
+  const day = getTrainingDay(input.dataset.day);
+  const exercise = day.exercises.find((item) => item.name === input.dataset.exercise);
+
+  if (!exercise) {
+    return;
+  }
+
+  savePlanField(
+    input.dataset.day,
+    exercise,
+    Number.parseInt(input.dataset.setIndex, 10),
+    input.dataset.field,
+    input.value,
+  );
+
+  const card = input.closest(".plan-card");
+
+  if (!card) {
+    return;
+  }
+
+  renderPlanHistory(
+    card.querySelector(".plan-history"),
+    normalizePlanEntry(exercise, getLastPlanEntry(input.dataset.day, input.dataset.exercise)),
+  );
 });
 
+planExercises.addEventListener("click", (event) => {
+  const deleteButton = event.target.closest(".plan-delete-button");
+
+  if (!deleteButton) {
+    return;
+  }
+
+  deletePlanExercise(deleteButton.dataset.day, deleteButton.dataset.exercise);
+});
+
+themeOptions.addEventListener("click", (event) => {
+  const swatch = event.target.closest(".theme-swatch");
+
+  if (!swatch) {
+    return;
+  }
+
+  personalization.theme = swatch.dataset.theme;
+  savePersonalization();
+  renderPersonalization();
+});
+
+renderPersonalization();
 renderDayTabs();
 renderTrainingPlan();
 renderExercises();
