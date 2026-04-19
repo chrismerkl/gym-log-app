@@ -10,7 +10,7 @@
   <main class="app-shell">
     <section class="hero">
       <div class="hero-content">
-        <p class="eyebrow">Chris Gym Log MVP</p>
+        <p class="eyebrow" id="profile-name-display">Gym Log MVP</p>
         <h1>Trainingsfortschritt einfach festhalten</h1>
         <p class="hero-copy">
           Füge Übungen hinzu, speichere Gewicht und Wiederholungen und verfolge deinen Fortschritt direkt im Browser.
@@ -36,18 +36,70 @@
       </div>
     </section>
 
+    <section class="panel personalization-panel">
+      <div class="panel-heading">
+        <h2>Personalisierung</h2>
+        <p>Gib deinem Plan einen Namen und waehle ein Theme fuer deine App.</p>
+      </div>
+      <form id="personalization-form" class="personalization-form">
+        <label class="field">
+          <span>Name</span>
+          <input id="profile-name-input" type="text" placeholder="z. B. Chris Plan" maxlength="40">
+        </label>
+        <div class="field">
+          <span>Farbe</span>
+          <div id="theme-options" class="theme-options" aria-label="Theme-Farben"></div>
+        </div>
+      </form>
+    </section>
+
     <section class="panel training-plan-panel">
       <div class="panel-heading">
         <h2>4-Tage Trainingsplan</h2>
         <p>Wechsle zwischen deinen festen Trainingstagen und trage Gewicht sowie Wiederholungen direkt pro Übung ein.</p>
       </div>
       <div id="day-tabs" class="day-tabs" aria-label="Trainingstage"></div>
+      <form id="plan-form" class="plan-form">
+        <label class="field">
+          <span>Neue Plan-Übung</span>
+          <input id="plan-exercise-name" type="text" placeholder="z. B. Rudern Maschine" required>
+        </label>
+        <label class="field">
+          <span>Sätze</span>
+          <select id="plan-exercise-sets">
+            <option value="2x">2x</option>
+            <option value="3x" selected>3x</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Wdh.-Bereich</span>
+          <input id="plan-exercise-reps" type="text" value="6-10" placeholder="6-10">
+        </label>
+        <button type="submit" class="button button-primary plan-form-button">
+          <span class="button-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+          </span>
+          <span>Zum Tag hinzufügen</span>
+        </button>
+      </form>
       <div class="day-overview">
         <div>
           <p id="active-day-label" class="day-label"></p>
           <h3 id="active-day-title" class="day-title"></h3>
         </div>
-        <p class="day-copy">Alle Werte werden automatisch im Browser gespeichert.</p>
+        <div class="day-actions">
+          <p class="day-copy">Alle Werte werden automatisch im Browser gespeichert.</p>
+          <button type="button" id="complete-training-button" class="button button-primary">
+            <span class="button-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M5 12l4 4L19 6"></path>
+              </svg>
+            </span>
+            <span>Training abschließen</span>
+          </button>
+        </div>
       </div>
       <div id="plan-exercises" class="plan-exercises" aria-live="polite"></div>
     </section>
@@ -146,17 +198,20 @@
           <p class="plan-exercise-name"></p>
           <p class="plan-prescription"></p>
         </div>
+        <button type="button" class="button button-delete plan-delete-button">
+          <span class="button-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 7h16"></path>
+              <path d="M9 7V5h6v2"></path>
+              <path d="M8 7l1 12h6l1-12"></path>
+              <path d="M10 11v5M14 11v5"></path>
+            </svg>
+          </span>
+          <span>Löschen</span>
+        </button>
       </div>
-      <div class="plan-inputs">
-        <label class="field">
-          <span>Gewicht (kg)</span>
-          <input class="plan-weight-input" type="number" min="0" step="0.5" placeholder="z. B. 22.5">
-        </label>
-        <label class="field">
-          <span>Wiederholungen (optional)</span>
-          <input class="plan-reps-input" type="number" min="0" step="1" placeholder="z. B. 8">
-        </label>
-      </div>
+      <div class="plan-set-list"></div>
+      <div class="plan-history"></div>
     </article>
   </template>
 
