@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chris Torso Limbs</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <div class="hero-content">
+        <p class="eyebrow">Chris Gym Log MVP</p>
+        <h1>Trainingsfortschritt einfach festhalten</h1>
+        <p class="hero-copy">
+          Füge Übungen hinzu, speichere Gewicht und Wiederholungen und verfolge deinen Fortschritt direkt im Browser.
+        </p>
+      </div>
+      <div class="hero-badges" aria-hidden="true">
+        <div class="hero-badge">
+          <span class="hero-badge-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 10h3l2-3h8l2 3h3v4h-3l-2 3H8l-2-3H3z"></path>
+            </svg>
+          </span>
+          <span>Workout</span>
+        </div>
+        <div class="hero-badge">
+          <span class="hero-badge-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"></path>
+            </svg>
+          </span>
+          <span>Progress</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel training-plan-panel">
+      <div class="panel-heading">
+        <h2>4-Tage Trainingsplan</h2>
+        <p>Wechsle zwischen deinen festen Trainingstagen und trage Gewicht sowie Wiederholungen direkt pro Übung ein.</p>
+      </div>
+      <div id="day-tabs" class="day-tabs" aria-label="Trainingstage"></div>
+      <div class="day-overview">
+        <div>
+          <p id="active-day-label" class="day-label"></p>
+          <h3 id="active-day-title" class="day-title"></h3>
+        </div>
+        <p class="day-copy">Alle Werte werden automatisch im Browser gespeichert.</p>
+      </div>
+      <div id="plan-exercises" class="plan-exercises" aria-live="polite"></div>
+    </section>
+
+    <section class="panel panel-grid">
+      <div class="panel-heading">
+        <h2>Neue Übung</h2>
+        <p>Lege schnell weitere Übungen für dein Training an.</p>
+      </div>
+      <form id="exercise-form" class="stack">
+        <label class="field">
+          <span>Übungsname</span>
+          <input id="exercise-name" name="exerciseName" type="text" placeholder="z. B. Bankdrücken" required>
+        </label>
+        <button type="submit" class="button button-primary">
+          <span class="button-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+          </span>
+          <span>Übung hinzufügen</span>
+        </button>
+      </form>
+      <div id="exercise-tags" class="tag-list" aria-live="polite"></div>
+    </section>
+
+    <section class="panel panel-grid">
+      <div class="panel-heading">
+        <h2>Training eintragen</h2>
+        <p>Das heutige Datum wird automatisch gespeichert.</p>
+      </div>
+      <form id="log-form" class="grid-form">
+        <label class="field field-wide">
+          <span>Übung</span>
+          <select id="exercise-select" name="exercise" required></select>
+        </label>
+        <label class="field">
+          <span>Gewicht (kg)</span>
+          <input id="weight-input" name="weight" type="number" min="0" step="0.5" placeholder="60" required>
+        </label>
+        <label class="field">
+          <span>Wiederholungen</span>
+          <input id="reps-input" name="reps" type="number" min="1" step="1" placeholder="8" required>
+        </label>
+        <button type="submit" class="button button-primary field-wide">
+          <span class="button-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M6 4h9l3 3v13H6z"></path>
+              <path d="M9 4v5h6V4"></path>
+            </svg>
+          </span>
+          <span>Eintrag speichern</span>
+        </button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>Fortschritt</h2>
+        <p>Deine letzten Einträge werden nach Datum sortiert angezeigt.</p>
+      </div>
+      <div id="progress-list" class="progress-list" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <template id="progress-item-template">
+    <article class="progress-card">
+      <div class="progress-main">
+        <div class="progress-info">
+          <p class="progress-exercise"></p>
+          <p class="progress-meta"></p>
+        </div>
+        <button type="button" class="button button-delete">
+          <span class="button-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 7h16"></path>
+              <path d="M9 7V5h6v2"></path>
+              <path d="M8 7l1 12h6l1-12"></path>
+              <path d="M10 11v5M14 11v5"></path>
+            </svg>
+          </span>
+          <span>Löschen</span>
+        </button>
+      </div>
+      <div class="progress-stats">
+        <span class="stat-pill stat-weight"></span>
+        <span class="stat-pill stat-reps"></span>
+      </div>
+    </article>
+  </template>
+
+  <template id="plan-exercise-template">
+    <article class="plan-card">
+      <div class="plan-card-top">
+        <div>
+          <p class="plan-exercise-name"></p>
+          <p class="plan-prescription"></p>
+        </div>
+      </div>
+      <div class="plan-inputs">
+        <label class="field">
+          <span>Gewicht (kg)</span>
+          <input class="plan-weight-input" type="number" min="0" step="0.5" placeholder="z. B. 22.5">
+        </label>
+        <label class="field">
+          <span>Wiederholungen (optional)</span>
+          <input class="plan-reps-input" type="number" min="0" step="1" placeholder="z. B. 8">
+        </label>
+      </div>
+    </article>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
