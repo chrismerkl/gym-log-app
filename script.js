@@ -1,4 +1,3 @@
-
 const STORAGE_KEYS = {
   exercises: "gym-log-exercises",
   logs: "gym-log-entries",
@@ -9,49 +8,6 @@ const STORAGE_KEYS = {
   legacyTrainingPlanData: "gym-log-training-plan",
   personalization: "gym-log-personalization",
 };
-
-const THEMES = [
-  {
-    id: "orange",
-    label: "Orange",
-    brand: "#ff7a1a",
-    brandDark: "#d85f06",
-    brandSoft: "rgba(255, 122, 26, 0.16)",
-    swatch: "linear-gradient(135deg, #ffb26c, #ff7a1a)",
-  },
-  {
-    id: "blue",
-    label: "Blau",
-    brand: "#52a7ff",
-    brandDark: "#2f7fda",
-    brandSoft: "rgba(82, 167, 255, 0.18)",
-    swatch: "linear-gradient(135deg, #8dc7ff, #4f99ff)",
-  },
-  {
-    id: "green",
-    label: "Gruen",
-    brand: "#52d98c",
-    brandDark: "#2ba968",
-    brandSoft: "rgba(82, 217, 140, 0.18)",
-    swatch: "linear-gradient(135deg, #91f0b6, #46c97b)",
-  },
-  {
-    id: "red",
-    label: "Rot",
-    brand: "#ff6b6b",
-    brandDark: "#d94a4a",
-    brandSoft: "rgba(255, 107, 107, 0.18)",
-    swatch: "linear-gradient(135deg, #ff9f9f, #ff6b6b)",
-  },
-  {
-    id: "violet",
-    label: "Violett",
-    brand: "#a978ff",
-    brandDark: "#8056d8",
-    brandSoft: "rgba(169, 120, 255, 0.18)",
-    swatch: "linear-gradient(135deg, #caabff, #9b68ff)",
-  },
-];
 
 const defaultExercises = [
   "Bankdrücken",
@@ -134,9 +90,10 @@ const planExerciseRepsInput = document.querySelector("#plan-exercise-reps");
 const profileNameDisplay = document.querySelector("#profile-name-display");
 const personalizationForm = document.querySelector("#personalization-form");
 const profileNameInput = document.querySelector("#profile-name-input");
-const themeOptions = document.querySelector("#theme-options");
+const exportDataButton = document.querySelector("#export-data-button");
 const completeTrainingButton = document.querySelector("#complete-training-button");
 const resetFeedback = document.querySelector("#reset-feedback");
+const planResetHint = document.querySelector(".plan-reset-hint");
 
 function readStorage(key, fallback) {
   const rawValue = localStorage.getItem(key);
@@ -172,7 +129,6 @@ let trainingHistory = readStorage(STORAGE_KEYS.trainingHistory, []);
 let activeTrainingDay = DEFAULT_TRAINING_DAYS[0].id;
 let personalization = readStorage(STORAGE_KEYS.personalization, {
   name: "",
-  theme: THEMES[0].id,
 });
 const chartInstances = new Map();
 let resetFeedbackTimeoutId = null;
@@ -201,8 +157,12 @@ if (!Array.isArray(planDays) || planDays.length === 0) {
   planDays = structuredClone(DEFAULT_TRAINING_DAYS);
 }
 
+trainingHistory = normalizeTrainingHistoryEntries(trainingHistory);
+
 if (!personalization || typeof personalization !== "object" || Array.isArray(personalization)) {
-  personalization = { name: "", theme: THEMES[0].id };
+  personalization = { name: "" };
+} else {
+  personalization = { name: personalization.name ?? "" };
 }
 
 activeTrainingDay = getTrainingDay(activeTrainingDay).id;
@@ -257,6 +217,49 @@ function getTrainingDay(dayId) {
   return planDays.find((day) => day.id === dayId) ?? planDays[0];
 }
 
+function getExerciseId(dayId, exerciseName) {
+  return `${dayId}-${exerciseName}`;
+}
+
+function normalizeTrainingHistoryEntries(entries) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  let hasChanges = false;
+  const normalizedEntries = entries.map((entry) => {
+    if (
+      !entry
+      || typeof entry !== "object"
+      || entry.exerciseId
+      || typeof entry.uebung !== "string"
+    ) {
+      return entry;
+    }
+
+    const matchingDays = planDays.filter((day) =>
+      day.exercises.some((exercise) => exercise.name === entry.uebung),
+    );
+
+    if (matchingDays.length !== 1) {
+      return entry;
+    }
+
+    hasChanges = true;
+
+    return {
+      ...entry,
+      exerciseId: getExerciseId(matchingDays[0].id, entry.uebung),
+    };
+  });
+
+  if (hasChanges) {
+    saveStorage(STORAGE_KEYS.trainingHistory, normalizedEntries);
+  }
+
+  return normalizedEntries;
+}
+
 function getDefaultTrainingDay(dayId) {
   return DEFAULT_TRAINING_DAYS.find((day) => day.id === dayId) ?? null;
 }
@@ -303,9 +306,9 @@ function normalizePlanEntry(exercise, entry) {
   };
 }
 
-function getExerciseHistory(exerciseName) {
+function getExerciseHistory(exerciseId) {
   return trainingHistory
-    .filter((entry) => entry.uebung === exerciseName && Array.isArray(entry.saetze))
+    .filter((entry) => entry.exerciseId === exerciseId && Array.isArray(entry.saetze))
     .sort((a, b) => new Date(a.datum) - new Date(b.datum));
 }
 
@@ -331,12 +334,10 @@ function destroyPlanCharts() {
   chartInstances.clear();
 }
 
-function renderExerciseChart(canvas, exerciseName) {
+function renderExerciseChart(canvas, exerciseId) {
   const chartSection = canvas.closest(".plan-chart-section");
-  const chartWrapper = canvas.closest(".plan-chart-wrapper");
-  const history = getStoredTrainingHistory()
-    .filter((entry) => entry.uebung === exerciseName && Array.isArray(entry.saetze))
-    .sort((a, b) => new Date(a.datum) - new Date(b.datum));
+  getStoredTrainingHistory();
+  const history = getExerciseHistory(exerciseId);
   const chartData = history
     .map((entry) => ({
       datum: formatHistoryDate(entry.datum),
@@ -533,49 +534,24 @@ function renderPlanHistory(container, lastValues, currentValues) {
   }
 }
 
-function getTheme(themeId) {
-  return THEMES.find((theme) => theme.id === themeId) ?? THEMES[0];
-}
-
-function applyTheme(themeId) {
-  const theme = getTheme(themeId);
-  const root = document.documentElement;
-
-  root.style.setProperty("--brand", theme.brand);
-  root.style.setProperty("--brand-dark", theme.brandDark);
-  root.style.setProperty("--brand-soft", theme.brandSoft);
-}
-
-function renderThemeOptions() {
-  themeOptions.innerHTML = "";
-
-  THEMES.forEach((theme) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "theme-swatch";
-    button.dataset.theme = theme.id;
-    button.title = theme.label;
-    button.setAttribute("aria-label", theme.label);
-    button.style.background = theme.swatch;
-
-    if (theme.id === personalization.theme) {
-      button.classList.add("active");
-    }
-
-    themeOptions.append(button);
-  });
-}
-
 function renderPersonalization() {
   const displayName = personalization.name.trim() || "Gym Log MVP";
 
   profileNameDisplay.textContent = displayName;
   profileNameInput.value = personalization.name ?? "";
-  applyTheme(personalization.theme);
-  renderThemeOptions();
 
   if (planExercises.childElementCount > 0) {
     renderTrainingPlan();
+  }
+}
+
+function renderResetTexts() {
+  if (planResetHint) {
+    planResetHint.textContent = "Hinweis: Standard-Übungen werden beim Zurücksetzen nur auf den Originalzustand gesetzt.";
+  }
+
+  if (resetFeedback) {
+    resetFeedback.textContent = "Übung zurückgesetzt";
   }
 }
 
@@ -593,6 +569,34 @@ function showResetFeedback() {
   resetFeedbackTimeoutId = setTimeout(() => {
     resetFeedback.classList.remove("is-visible");
   }, 2000);
+}
+
+function buildExportData() {
+  return {
+    exportedAt: new Date().toISOString(),
+    trainingsplan: readStorage(STORAGE_KEYS.trainingPlanStructure, planDays),
+    fortschritt: {
+      aktuelleDaten: readStorage(STORAGE_KEYS.trainingPlanCurrentData, planCurrentEntries),
+      letztesTraining: readStorage(STORAGE_KEYS.trainingPlanLastData, planLastEntries),
+      logEintraege: readStorage(STORAGE_KEYS.logs, logs),
+    },
+    history: readStorage(STORAGE_KEYS.trainingHistory, trainingHistory),
+  };
+}
+
+function exportDataAsJson() {
+  const exportData = buildExportData();
+  const json = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = downloadUrl;
+  link.download = `gym-log-export-${getTodayDate()}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(downloadUrl);
 }
 
 function renderDayTabs() {
@@ -622,6 +626,7 @@ function renderTrainingPlan() {
   planExercises.innerHTML = "";
 
   activeDay.exercises.forEach((exercise) => {
+    const exerciseId = getExerciseId(activeDay.id, exercise.name);
     const fragment = planExerciseTemplate.content.cloneNode(true);
     const setList = fragment.querySelector(".plan-set-list");
     const deleteButton = fragment.querySelector(".plan-delete-button");
@@ -634,6 +639,16 @@ function renderTrainingPlan() {
     fragment.querySelector(".plan-prescription").textContent = `${exercise.sets} ${exercise.reps}`;
     deleteButton.dataset.day = activeDay.id;
     deleteButton.dataset.exercise = exercise.name;
+    deleteButton.title = "Standard-Übungen werden nur zurückgesetzt.";
+    deleteButton.setAttribute("aria-label", "Übung zurücksetzen");
+    deleteButton.lastElementChild.textContent = "Zurücksetzen";
+    deleteButton.querySelector("svg").innerHTML = `
+      <path d="M20 11a8 8 0 1 1-2.34-5.66"></path>
+      <path d="M20 4v7h-7"></path>
+    `;
+    deleteButton.title = "Standard-\u00dcbungen werden nur zur\u00fcckgesetzt.";
+    deleteButton.setAttribute("aria-label", "\u00dcbung zur\u00fccksetzen");
+    deleteButton.lastElementChild.textContent = "Zur\u00fccksetzen";
 
     currentValues.sets.forEach((setEntry, index) => {
       const row = document.createElement("div");
@@ -679,7 +694,7 @@ function renderTrainingPlan() {
 
     renderPlanHistory(historyBlock, lastValues, currentValues);
     planExercises.append(fragment);
-    requestAnimationFrame(() => renderExerciseChart(chartCanvas, exercise.name));
+    requestAnimationFrame(() => renderExerciseChart(chartCanvas, exerciseId));
   });
 }
 
@@ -712,6 +727,7 @@ function completeTrainingDay(dayId) {
     };
 
     trainingHistory.push({
+      exerciseId: getExerciseId(dayId, exercise.name),
       uebung: exercise.name,
       datum: getTodayDate(),
       saetze: currentValues.sets.map((setEntry) => ({
@@ -798,7 +814,8 @@ function deletePlanExercise(dayId, exerciseName) {
     saveLastPlanData();
   }
 
-  trainingHistory = trainingHistory.filter((entry) => entry.uebung !== exerciseName);
+  const exerciseId = getExerciseId(dayId, exerciseName);
+  trainingHistory = trainingHistory.filter((entry) => entry.exerciseId !== exerciseId);
   saveTrainingHistory();
 
   savePlanStructure();
@@ -958,6 +975,10 @@ personalizationForm.addEventListener("input", (event) => {
   renderPersonalization();
 });
 
+exportDataButton.addEventListener("click", () => {
+  exportDataAsJson();
+});
+
 dayTabs.addEventListener("click", (event) => {
   const dayButton = event.target.closest(".day-tab");
 
@@ -1019,18 +1040,7 @@ planExercises.addEventListener("click", (event) => {
   deletePlanExercise(deleteButton.dataset.day, deleteButton.dataset.exercise);
 });
 
-themeOptions.addEventListener("click", (event) => {
-  const swatch = event.target.closest(".theme-swatch");
-
-  if (!swatch) {
-    return;
-  }
-
-  personalization.theme = swatch.dataset.theme;
-  savePersonalization();
-  renderPersonalization();
-});
-
+renderResetTexts();
 renderPersonalization();
 renderDayTabs();
 renderTrainingPlan();
