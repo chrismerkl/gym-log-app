@@ -1,3 +1,4 @@
+
 :root {
   --bg: #090b10;
   --bg-deep: #05070b;
@@ -40,12 +41,19 @@ select {
 }
 
 .app-shell {
+  display: flex;
+  flex-direction: column;
   width: min(980px, calc(100% - 32px));
   margin: 0 auto;
   padding: 44px 0 64px;
 }
 
+.app-shell > * {
+  order: 10;
+}
+
 .hero {
+  order: 1;
   position: relative;
   overflow: hidden;
   display: grid;
@@ -165,10 +173,14 @@ select {
 }
 
 .training-plan-panel {
-  overflow: hidden;
+  order: 2;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
 }
 
 .personalization-panel {
+  order: 8;
   position: relative;
 }
 
@@ -185,6 +197,7 @@ select {
 }
 
 .day-tabs {
+  order: 2;
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
@@ -192,6 +205,7 @@ select {
 }
 
 .plan-form {
+  order: 6;
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) 120px 140px auto;
   gap: 14px;
@@ -223,6 +237,7 @@ select {
 }
 
 .day-overview {
+  order: 3;
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -246,6 +261,13 @@ select {
   font-size: clamp(1.6rem, 3vw, 2.4rem);
 }
 
+.day-order-hint {
+  margin: 10px 0 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: rgba(245, 247, 251, 0.72);
+}
+
 .day-copy {
   max-width: 300px;
   margin: 0;
@@ -260,6 +282,7 @@ select {
 }
 
 .reset-feedback {
+  order: 4;
   margin: 14px 0 0;
   font-size: 0.85rem;
   color: rgba(245, 247, 251, 0.72);
@@ -275,6 +298,7 @@ select {
 }
 
 .plan-exercises {
+  order: 5;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
@@ -295,6 +319,29 @@ select {
   justify-content: space-between;
   gap: 12px;
   align-items: start;
+}
+
+.plan-card-info {
+  display: flex;
+  gap: 14px;
+  align-items: start;
+}
+
+.plan-order-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 122, 26, 0.16), rgba(255, 122, 26, 0.05));
+  color: #ffbe8d;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .plan-exercise-name {
@@ -670,34 +717,93 @@ select {
 
 @media (max-width: 680px) {
   .app-shell {
-    width: min(100% - 20px, 960px);
-    padding-top: 20px;
+    width: 100%;
+    padding: 0 0 48px;
   }
 
   .hero {
     grid-template-columns: 1fr;
+    gap: 10px;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .hero-badges {
-    justify-items: start;
+    display: none;
   }
 
   .hero,
   .panel {
-    padding: 18px;
+    padding: 16px;
+  }
+
+  .hero h1 {
+    font-size: 1.75rem;
+    line-height: 1.1;
+  }
+
+  .hero-copy {
+    display: none;
+  }
+
+  .panel {
+    margin-top: 12px;
+    border-radius: 18px;
+  }
+
+  .training-plan-panel {
+    margin-top: 0;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0 0 18px 18px;
+  }
+
+  .training-plan-panel .panel-heading p:not(.plan-reset-hint) {
+    display: none;
+  }
+
+  .day-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .day-tab {
+    min-height: 46px;
+    padding: 10px 8px;
+  }
+
+  .plan-form {
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .day-overview {
+    position: sticky;
+    top: 0;
+    z-index: 5;
     flex-direction: column;
     align-items: start;
+    gap: 12px;
+    margin: 16px -16px 0;
+    padding: 14px 16px;
+    background: rgba(13, 18, 28, 0.96);
+    backdrop-filter: blur(14px);
   }
 
   .day-copy {
+    display: none;
     text-align: left;
   }
 
   .day-actions {
+    width: 100%;
     justify-items: start;
+  }
+
+  .day-actions .button {
+    width: 100%;
   }
 
   .personalization-form,
@@ -708,10 +814,59 @@ select {
 
   .plan-exercises {
     grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .plan-card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .plan-card-top {
+    gap: 10px;
+  }
+
+  .plan-card-info {
+    gap: 10px;
+  }
+
+  .plan-order-badge {
+    min-width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 0.92rem;
   }
 
   .plan-set-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 64px repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .plan-set-row .field {
+    gap: 6px;
+  }
+
+  .plan-set-row .field span {
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .plan-set-row .field input {
+    min-height: 48px;
+    padding: 12px 10px;
+  }
+
+  .plan-set-label {
+    min-height: 48px;
+    font-size: 0.9rem;
+  }
+
+  .plan-chart-wrapper {
+    min-height: 160px;
+    padding: 8px;
   }
 
   .progress-card,
