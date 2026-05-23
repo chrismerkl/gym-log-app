@@ -112,90 +112,10 @@
       <div id="plan-exercises" class="plan-exercises" aria-live="polite"></div>
     </section>
 
-    <section class="panel panel-grid">
-      <div class="panel-heading">
-        <h2>Neue Übung</h2>
-        <p>Lege schnell weitere Übungen für dein Training an.</p>
-      </div>
-      <form id="exercise-form" class="stack">
-        <label class="field">
-          <span>Übungsname</span>
-          <input id="exercise-name" name="exerciseName" type="text" placeholder="z. B. Bankdrücken" required>
-        </label>
-        <button type="submit" class="button button-primary">
-          <span class="button-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 5v14M5 12h14"></path>
-            </svg>
-          </span>
-          <span>Übung hinzufügen</span>
-        </button>
-      </form>
-      <div id="exercise-tags" class="tag-list" aria-live="polite"></div>
-    </section>
 
-    <section class="panel panel-grid">
-      <div class="panel-heading">
-        <h2>Training eintragen</h2>
-        <p>Das heutige Datum wird automatisch gespeichert.</p>
-      </div>
-      <form id="log-form" class="grid-form">
-        <label class="field field-wide">
-          <span>Übung</span>
-          <select id="exercise-select" name="exercise" required></select>
-        </label>
-        <label class="field">
-          <span>Gewicht (kg)</span>
-          <input id="weight-input" name="weight" type="number" min="0" step="0.5" placeholder="60" required>
-        </label>
-        <label class="field">
-          <span>Wiederholungen</span>
-          <input id="reps-input" name="reps" type="number" min="1" step="1" placeholder="8" required>
-        </label>
-        <button type="submit" class="button button-primary field-wide">
-          <span class="button-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M6 4h9l3 3v13H6z"></path>
-              <path d="M9 4v5h6V4"></path>
-            </svg>
-          </span>
-          <span>Eintrag speichern</span>
-        </button>
-      </form>
-    </section>
 
-    <section class="panel">
-      <div class="panel-heading">
-        <h2>Fortschritt</h2>
-        <p>Deine letzten Einträge werden nach Datum sortiert angezeigt.</p>
-      </div>
-      <div id="progress-list" class="progress-list" aria-live="polite"></div>
-    </section>
   </main>
 
-  <template id="progress-item-template">
-    <article class="progress-card">
-      <div class="progress-main">
-        <div class="progress-info">
-          <p class="progress-exercise"></p>
-          <p class="progress-meta"></p>
-        </div>
-        <button type="button" class="button button-delete">
-          <span class="button-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M20 11a8 8 0 1 1-2.34-5.66"></path>
-              <path d="M20 4v7h-7"></path>
-            </svg>
-          </span>
-          <span>Löschen</span>
-        </button>
-      </div>
-      <div class="progress-stats">
-        <span class="stat-pill stat-weight"></span>
-        <span class="stat-pill stat-reps"></span>
-      </div>
-    </article>
-  </template>
 
   <template id="plan-exercise-template">
     <article class="plan-card">
