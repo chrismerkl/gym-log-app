@@ -1,6 +1,4 @@
 const STORAGE_KEYS = {
-  exercises: "gym-log-exercises",
-  logs: "gym-log-entries",
   trainingPlanStructure: "gym-log-training-plan-structure",
   trainingPlanCurrentData: "gym-log-training-plan-current-data",
   trainingPlanLastData: "gym-log-training-plan-last-data",
@@ -8,13 +6,6 @@ const STORAGE_KEYS = {
   legacyTrainingPlanData: "gym-log-training-plan",
   personalization: "gym-log-personalization",
 };
-
-const defaultExercises = [
-  "Bankdrücken",
-  "Kniebeugen",
-  "Kreuzheben",
-  "Schulterdrücken",
-];
 
 const DEFAULT_TRAINING_DAYS = [
   {
@@ -69,15 +60,6 @@ const DEFAULT_TRAINING_DAYS = [
   },
 ];
 
-const exerciseForm = document.querySelector("#exercise-form");
-const exerciseInput = document.querySelector("#exercise-name");
-const exerciseTags = document.querySelector("#exercise-tags");
-const logForm = document.querySelector("#log-form");
-const exerciseSelect = document.querySelector("#exercise-select");
-const weightInput = document.querySelector("#weight-input");
-const repsInput = document.querySelector("#reps-input");
-const progressList = document.querySelector("#progress-list");
-const progressTemplate = document.querySelector("#progress-item-template");
 const dayTabs = document.querySelector("#day-tabs");
 const activeDayLabel = document.querySelector("#active-day-label");
 const activeDayTitle = document.querySelector("#active-day-title");
@@ -114,8 +96,6 @@ function saveStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-let exercises = readStorage(STORAGE_KEYS.exercises, defaultExercises);
-let logs = readStorage(STORAGE_KEYS.logs, []);
 let planDays = readStorage(
   STORAGE_KEYS.trainingPlanStructure,
   structuredClone(DEFAULT_TRAINING_DAYS),
@@ -132,14 +112,8 @@ let personalization = readStorage(STORAGE_KEYS.personalization, {
 });
 const chartInstances = new Map();
 let resetFeedbackTimeoutId = null;
-
-if (!Array.isArray(exercises) || exercises.length === 0) {
-  exercises = [...defaultExercises];
-}
-
-if (!Array.isArray(logs)) {
-  logs = [];
-}
+let editingExercise = null;
+let planCompletedToday = {};
 
 if (!planCurrentEntries || typeof planCurrentEntries !== "object" || Array.isArray(planCurrentEntries)) {
   planCurrentEntries = {};
@@ -187,14 +161,138 @@ function savePersonalization() {
   saveStorage(STORAGE_KEYS.personalization, personalization);
 }
 
-function formatDate(dateString) {
-  const date = new Date(dateString);
-
-  return new Intl.DateTimeFormat("de-DE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+function isExerciseCompleted(dayId, exerciseName) {
+  const completedList = planCompletedToday[dayId];
+  return Array.isArray(completedList) && completedList.indexOf(exerciseName) !== -1;
 }
+
+function completeExercise(dayId, exerciseName) {
+  const day = getTrainingDay(dayId);
+  const exercise = day.exercises.find((item) => item.name === exerciseName);
+
+  if (!exercise) {
+    return;
+  }
+
+  const currentValues = normalizePlanEntry(exercise, getCurrentPlanEntry(dayId, exerciseName));
+  const hasData = currentValues.sets.some(
+    (setEntry) => setEntry.weight !== "" || setEntry.reps !== "",
+  );
+
+  if (hasData) {
+    if (!planLastEntries[dayId]) {
+      planLastEntries[dayId] = {};
+    }
+
+    planLastEntries[dayId][exerciseName] = {
+      sets: currentValues.sets.map((setEntry) => ({
+        weight: setEntry.weight,
+        reps: setEntry.reps,
+      })),
+    };
+
+    const exerciseId = getExerciseId(dayId, exerciseName);
+    const today = getTodayDate();
+    trainingHistory = trainingHistory.filter(
+      (entry) => !(entry.exerciseId === exerciseId && entry.datum === today),
+    );
+
+    trainingHistory.push({
+      exerciseId: exerciseId,
+      uebung: exerciseName,
+      datum: today,
+      saetze: currentValues.sets.map((setEntry) => ({
+        gewicht: Number.parseFloat(setEntry.weight),
+        wdh: Number.parseInt(setEntry.reps, 10),
+      })),
+    });
+
+    saveLastPlanData();
+    saveTrainingHistory();
+  }
+
+  if (!Array.isArray(planCompletedToday[dayId])) {
+    planCompletedToday[dayId] = [];
+  }
+
+  if (planCompletedToday[dayId].indexOf(exerciseName) === -1) {
+    planCompletedToday[dayId].push(exerciseName);
+  }
+
+  renderTrainingPlan();
+}
+
+function editPlanExercise(dayId, oldName, newName, newSets, newReps) {
+  const day = getTrainingDay(dayId);
+
+  if (!day) {
+    return;
+  }
+
+  const trimmedNewName = newName.trim();
+  const trimmedNewReps = newReps.trim() || "6-10";
+
+  if (!trimmedNewName) {
+    return;
+  }
+
+  const nameChanged = trimmedNewName !== oldName;
+
+  if (nameChanged) {
+    const exists = day.exercises.some(
+      (item) => item.name.toLowerCase() === trimmedNewName.toLowerCase() && item.name !== oldName,
+    );
+
+    if (exists) {
+      alert("Diese Übung ist im Trainingsplan bereits vorhanden.");
+      return;
+    }
+  }
+
+  day.exercises = day.exercises.map((exercise) => {
+    if (exercise.name !== oldName) {
+      return exercise;
+    }
+
+    return { name: trimmedNewName, sets: newSets, reps: trimmedNewReps };
+  });
+
+  if (nameChanged) {
+    if (planCurrentEntries[dayId] && planCurrentEntries[dayId][oldName] !== undefined) {
+      planCurrentEntries[dayId][trimmedNewName] = planCurrentEntries[dayId][oldName];
+      delete planCurrentEntries[dayId][oldName];
+      saveCurrentPlanData();
+    }
+
+    if (planLastEntries[dayId] && planLastEntries[dayId][oldName] !== undefined) {
+      planLastEntries[dayId][trimmedNewName] = planLastEntries[dayId][oldName];
+      delete planLastEntries[dayId][oldName];
+      saveLastPlanData();
+    }
+
+    const oldExerciseId = getExerciseId(dayId, oldName);
+    const newExerciseId = getExerciseId(dayId, trimmedNewName);
+    trainingHistory = trainingHistory.map((entry) => {
+      if (entry.exerciseId !== oldExerciseId) {
+        return entry;
+      }
+      return { ...entry, exerciseId: newExerciseId, uebung: trimmedNewName };
+    });
+    saveTrainingHistory();
+
+    if (Array.isArray(planCompletedToday[dayId])) {
+      const idx = planCompletedToday[dayId].indexOf(oldName);
+      if (idx !== -1) {
+        planCompletedToday[dayId][idx] = trimmedNewName;
+      }
+    }
+  }
+
+  savePlanStructure();
+  editingExercise = null;
+  renderTrainingPlan();
+}
+
 
 function formatHistoryDate(dateString) {
   const date = new Date(dateString);
@@ -625,58 +723,113 @@ function renderTrainingPlan() {
   destroyPlanCharts();
   planExercises.innerHTML = "";
 
-  activeDay.exercises.forEach((exercise) => {
+  const totalExercises = activeDay.exercises.length;
+  const completedList = Array.isArray(planCompletedToday[activeDay.id])
+    ? planCompletedToday[activeDay.id]
+    : [];
+  const completedCount = completedList.length;
+  const pct = totalExercises > 0 ? Math.round((completedCount / totalExercises) * 100) : 0;
+
+  const progressCounter = document.createElement("div");
+  progressCounter.className = "plan-progress-counter";
+  const progressTextEl = document.createElement("p");
+  progressTextEl.className = "plan-progress-text";
+  progressTextEl.textContent = completedCount + " / " + totalExercises + " Übungen erledigt";
+  const progressBarEl = document.createElement("div");
+  progressBarEl.className = "plan-progress-bar";
+  const progressFillEl = document.createElement("div");
+  progressFillEl.className = "plan-progress-fill";
+  progressFillEl.style.width = pct + "%";
+  progressBarEl.append(progressFillEl);
+  progressCounter.append(progressTextEl, progressBarEl);
+  planExercises.append(progressCounter);
+
+  activeDay.exercises.forEach(function (exercise, exerciseIndex) {
     const exerciseId = getExerciseId(activeDay.id, exercise.name);
-    const fragment = planExerciseTemplate.content.cloneNode(true);
-    const setList = fragment.querySelector(".plan-set-list");
-    const deleteButton = fragment.querySelector(".plan-delete-button");
-    const historyBlock = fragment.querySelector(".plan-history");
-    const chartCanvas = fragment.querySelector(".plan-chart");
+    const isCompleted = isExerciseCompleted(activeDay.id, exercise.name);
+    const isEditing = editingExercise !== null
+      && editingExercise.dayId === activeDay.id
+      && editingExercise.name === exercise.name;
+    const orderNum = exerciseIndex + 1;
+
+    if (isEditing) {
+      const card = document.createElement("article");
+      card.className = "plan-card is-editing";
+      card.innerHTML = "<div class=\"plan-card-top\"><div class=\"plan-card-info\"><span class=\"plan-order-badge\">" + orderNum + "</span><div><p class=\"plan-exercise-name\"></p></div></div></div><div class=\"plan-edit-form\"><label class=\"field plan-edit-label\"><span>Name</span><input class=\"plan-edit-name\" type=\"text\" maxlength=\"60\"></label><div class=\"plan-edit-fields\"><label class=\"field\"><span>Sätze</span><select class=\"plan-edit-sets\"><option value=\"2x\">2x</option><option value=\"3x\">3x</option></select></label><label class=\"field\"><span>Wdh.-Bereich</span><input class=\"plan-edit-reps\" type=\"text\" maxlength=\"10\"></label></div><div class=\"plan-edit-actions\"><button type=\"button\" class=\"button button-primary plan-edit-save-button\"><span>Speichern</span></button><button type=\"button\" class=\"button button-cancel plan-edit-cancel-button\"><span>Abbrechen</span></button></div></div>";
+      card.querySelector(".plan-exercise-name").textContent = exercise.name;
+      card.querySelector(".plan-edit-name").value = exercise.name;
+      card.querySelector(".plan-edit-sets").value = exercise.sets;
+      card.querySelector(".plan-edit-reps").value = exercise.reps;
+      card.querySelector(".plan-edit-save-button").dataset.day = activeDay.id;
+      card.querySelector(".plan-edit-save-button").dataset.exercise = exercise.name;
+      planExercises.append(card);
+      return;
+    }
+
+    const isDefaultExercise = getDefaultExercise(activeDay.id, exercise.name) !== null;
     const currentValues = normalizePlanEntry(exercise, getCurrentPlanEntry(activeDay.id, exercise.name));
     const lastValues = normalizePlanEntry(exercise, getLastPlanEntry(activeDay.id, exercise.name));
 
-    fragment.querySelector(".plan-exercise-name").textContent = exercise.name;
-    fragment.querySelector(".plan-prescription").textContent = `${exercise.sets} ${exercise.reps}`;
-    deleteButton.dataset.day = activeDay.id;
-    deleteButton.dataset.exercise = exercise.name;
-    deleteButton.title = "Standard-Übungen werden nur zurückgesetzt.";
-    deleteButton.setAttribute("aria-label", "Übung zurücksetzen");
-    deleteButton.lastElementChild.textContent = "Zurücksetzen";
-    deleteButton.querySelector("svg").innerHTML = `
-      <path d="M20 11a8 8 0 1 1-2.34-5.66"></path>
-      <path d="M20 4v7h-7"></path>
-    `;
-    deleteButton.title = "Standard-\u00dcbungen werden nur zur\u00fcckgesetzt.";
-    deleteButton.setAttribute("aria-label", "\u00dcbung zur\u00fccksetzen");
-    deleteButton.lastElementChild.textContent = "Zur\u00fccksetzen";
+    const card = document.createElement("article");
+    card.className = isCompleted ? "plan-card is-completed" : "plan-card";
 
-    currentValues.sets.forEach((setEntry, index) => {
+    const deleteClass = isDefaultExercise
+      ? "button button-delete plan-delete-button"
+      : "button button-delete plan-delete-button button-delete-custom";
+    const deleteTitle = isDefaultExercise
+      ? "Standard-Übungen werden nur zurückgesetzt."
+      : "Übung löschen";
+    const deleteLabel = isDefaultExercise
+      ? "Zurücksetzen"
+      : "Löschen";
+    const deleteAriaLabel = isDefaultExercise
+      ? "Übung zurücksetzen"
+      : "Übung löschen";
+    const deleteSvgPaths = isDefaultExercise
+      ? "<path d=\"M20 11a8 8 0 1 1-2.34-5.66\"></path><path d=\"M20 4v7h-7\"></path>"
+      : "<path d=\"M3 6h18\"></path><path d=\"M19 6l-1 14H6L5 6\"></path><path d=\"M8 6V4h8v2\"></path>";
+
+    card.innerHTML = "<div class=\"plan-card-top\"><div class=\"plan-card-info\"><span class=\"plan-order-badge\">" + orderNum + "</span><div><p class=\"plan-exercise-name\"></p><p class=\"plan-prescription\"></p></div></div><div class=\"plan-card-actions\"><button type=\"button\" class=\"button button-edit\"><span class=\"button-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\"><path d=\"M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7\"></path><path d=\"M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z\"></path></svg></span><span>Bearbeiten</span></button><button class=\"" + deleteClass + "\" title=\"\" aria-label=\"\"><span class=\"button-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\">" + deleteSvgPaths + "</svg></span><span></span></button></div></div><div class=\"plan-set-list\"></div><div class=\"plan-history\"></div><div class=\"plan-chart-section\"><p class=\"plan-chart-title\">Verlauf</p><div class=\"plan-chart-wrapper\"><canvas class=\"plan-chart\"></canvas></div></div>";
+
+    card.querySelector(".plan-exercise-name").textContent = exercise.name;
+    card.querySelector(".plan-prescription").textContent = exercise.sets + " " + exercise.reps;
+
+    const editBtn = card.querySelector(".button-edit");
+    editBtn.dataset.day = activeDay.id;
+    editBtn.dataset.exercise = exercise.name;
+
+    const deleteBtn = card.querySelector(".plan-delete-button");
+    deleteBtn.dataset.day = activeDay.id;
+    deleteBtn.dataset.exercise = exercise.name;
+    deleteBtn.title = deleteTitle;
+    deleteBtn.setAttribute("aria-label", deleteAriaLabel);
+    deleteBtn.querySelector("span:last-child").textContent = deleteLabel;
+
+    const setList = card.querySelector(".plan-set-list");
+    const historyBlock = card.querySelector(".plan-history");
+    const chartCanvas = card.querySelector(".plan-chart");
+
+    currentValues.sets.forEach(function (setEntry, index) {
       const row = document.createElement("div");
       row.className = "plan-set-row";
 
       const setLabel = document.createElement("p");
       setLabel.className = "plan-set-label";
-      setLabel.textContent = `Satz ${index + 1}`;
+      setLabel.textContent = "Satz " + (index + 1);
 
       const weightLabel = document.createElement("label");
       weightLabel.className = "field";
-      weightLabel.innerHTML = `
-        <span>Gewicht (kg)</span>
-        <input class="plan-set-input" type="number" min="0" step="0.5" placeholder="z. B. 22.5">
-      `;
+      weightLabel.innerHTML = "<span>Gewicht (kg)</span><input class=\"plan-set-input\" type=\"number\" min=\"0\" step=\"0.5\" placeholder=\"z. B. 22.5\">";
 
       const repsLabel = document.createElement("label");
       repsLabel.className = "field";
-      repsLabel.innerHTML = `
-        <span>Wiederholungen</span>
-        <input class="plan-set-input" type="number" min="0" step="1" placeholder="z. B. 8">
-      `;
+      repsLabel.innerHTML = "<span>Wiederholungen</span><input class=\"plan-set-input\" type=\"number\" min=\"0\" step=\"1\" placeholder=\"z. B. 8\">";
 
       const weightField = weightLabel.querySelector("input");
       const repsField = repsLabel.querySelector("input");
 
-      weightField.value = setEntry.weight ?? "";
-      repsField.value = setEntry.reps ?? "";
+      weightField.value = setEntry.weight || "";
+      repsField.value = setEntry.reps || "";
 
       weightField.dataset.day = activeDay.id;
       weightField.dataset.exercise = exercise.name;
@@ -693,8 +846,24 @@ function renderTrainingPlan() {
     });
 
     renderPlanHistory(historyBlock, lastValues, currentValues);
-    planExercises.append(fragment);
-    requestAnimationFrame(() => renderExerciseChart(chartCanvas, exerciseId));
+
+    if (isCompleted) {
+      const badge = document.createElement("p");
+      badge.className = "plan-completed-badge";
+      badge.textContent = "✓ Erledigt";
+      card.append(badge);
+    } else {
+      const completeBtn = document.createElement("button");
+      completeBtn.type = "button";
+      completeBtn.className = "button button-complete-exercise";
+      completeBtn.dataset.day = activeDay.id;
+      completeBtn.dataset.exercise = exercise.name;
+      completeBtn.innerHTML = "<span class=\"button-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\"><path d=\"M5 12l4 4L19 6\"></path></svg></span><span>Übung abschließen</span>";
+      card.append(completeBtn);
+    }
+
+    planExercises.append(card);
+    requestAnimationFrame(function () { renderExerciseChart(chartCanvas, exerciseId); });
   });
 }
 
@@ -823,133 +992,6 @@ function deletePlanExercise(dayId, exerciseName) {
   showResetFeedback();
 }
 
-function renderExercises() {
-  exerciseSelect.innerHTML = "";
-  exerciseTags.innerHTML = "";
-
-  exercises.forEach((exercise) => {
-    const option = document.createElement("option");
-    option.value = exercise;
-    option.textContent = exercise;
-    exerciseSelect.append(option);
-
-    const tag = document.createElement("span");
-    tag.className = "tag";
-    tag.textContent = exercise;
-    exerciseTags.append(tag);
-  });
-}
-
-function renderLogs() {
-  progressList.innerHTML = "";
-
-  if (logs.length === 0) {
-    const emptyState = document.createElement("div");
-    emptyState.className = "empty-state";
-    emptyState.textContent = "Noch keine Einträge vorhanden. Starte mit deinem ersten Satz.";
-    progressList.append(emptyState);
-    return;
-  }
-
-  const sortedLogs = [...logs].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  sortedLogs.forEach((log) => {
-    const fragment = progressTemplate.content.cloneNode(true);
-    const card = fragment.querySelector(".progress-card");
-    const deleteButton = fragment.querySelector(".button-delete");
-
-    card.dataset.id = log.id;
-    fragment.querySelector(".progress-exercise").textContent = log.exercise;
-    fragment.querySelector(".progress-meta").textContent = formatDate(log.date);
-    fragment.querySelector(".stat-weight").textContent = `${log.weight} kg`;
-    fragment.querySelector(".stat-reps").textContent = `${log.reps} Wdh`;
-    deleteButton.dataset.id = log.id;
-    progressList.append(fragment);
-  });
-}
-
-function addExercise(name) {
-  const trimmedName = name.trim();
-
-  if (!trimmedName) {
-    return;
-  }
-
-  const exists = exercises.some(
-    (exercise) => exercise.toLowerCase() === trimmedName.toLowerCase(),
-  );
-
-  if (exists) {
-    alert("Diese Übung ist bereits vorhanden.");
-    return;
-  }
-
-  exercises = [...exercises, trimmedName];
-  saveStorage(STORAGE_KEYS.exercises, exercises);
-  renderExercises();
-  exerciseSelect.value = trimmedName;
-}
-
-function addLogEntry({ exercise, weight, reps }) {
-  const entry = {
-    id: crypto.randomUUID(),
-    exercise,
-    weight,
-    reps,
-    date: new Date().toISOString(),
-  };
-
-  logs = [entry, ...logs];
-  saveStorage(STORAGE_KEYS.logs, logs);
-  renderLogs();
-}
-
-function deleteLogEntry(entryId) {
-  logs = logs.filter((log) => log.id !== entryId);
-  saveStorage(STORAGE_KEYS.logs, logs);
-  renderLogs();
-}
-
-exerciseForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  addExercise(exerciseInput.value);
-  exerciseForm.reset();
-  exerciseInput.focus();
-});
-
-logForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  const selectedExercise = exerciseSelect.value;
-  const weight = Number.parseFloat(weightInput.value);
-  const reps = Number.parseInt(repsInput.value, 10);
-
-  if (!selectedExercise || Number.isNaN(weight) || Number.isNaN(reps)) {
-    alert("Bitte alle Felder korrekt ausfüllen.");
-    return;
-  }
-
-  addLogEntry({
-    exercise: selectedExercise,
-    weight,
-    reps,
-  });
-
-  logForm.reset();
-  exerciseSelect.value = selectedExercise;
-  weightInput.focus();
-});
-
-progressList.addEventListener("click", (event) => {
-  const deleteButton = event.target.closest(".button-delete");
-
-  if (!deleteButton) {
-    return;
-  }
-
-  deleteLogEntry(deleteButton.dataset.id);
-});
-
 planForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
@@ -987,6 +1029,8 @@ dayTabs.addEventListener("click", (event) => {
   }
 
   activeTrainingDay = dayButton.dataset.day;
+  planCompletedToday = {};
+  editingExercise = null;
   renderDayTabs();
   renderTrainingPlan();
 });
@@ -1032,17 +1076,45 @@ planExercises.addEventListener("input", (event) => {
 
 planExercises.addEventListener("click", (event) => {
   const deleteButton = event.target.closest(".plan-delete-button");
+  const editButton = event.target.closest(".button-edit");
+  const saveEditButton = event.target.closest(".plan-edit-save-button");
+  const cancelEditButton = event.target.closest(".plan-edit-cancel-button");
+  const completeButton = event.target.closest(".button-complete-exercise");
 
-  if (!deleteButton) {
+  if (deleteButton) {
+    deletePlanExercise(deleteButton.dataset.day, deleteButton.dataset.exercise);
     return;
   }
 
-  deletePlanExercise(deleteButton.dataset.day, deleteButton.dataset.exercise);
+  if (editButton) {
+    editingExercise = { dayId: editButton.dataset.day, name: editButton.dataset.exercise };
+    renderTrainingPlan();
+    return;
+  }
+
+  if (cancelEditButton) {
+    editingExercise = null;
+    renderTrainingPlan();
+    return;
+  }
+
+  if (saveEditButton) {
+    const card = saveEditButton.closest(".plan-card");
+    const newName = card.querySelector(".plan-edit-name").value;
+    const newSets = card.querySelector(".plan-edit-sets").value;
+    const newReps = card.querySelector(".plan-edit-reps").value;
+    editPlanExercise(saveEditButton.dataset.day, saveEditButton.dataset.exercise, newName, newSets, newReps);
+    return;
+  }
+
+  if (completeButton) {
+    completeExercise(completeButton.dataset.day, completeButton.dataset.exercise);
+    return;
+  }
 });
 
 renderResetTexts();
 renderPersonalization();
 renderDayTabs();
 renderTrainingPlan();
-renderExercises();
-renderLogs();
+
