@@ -882,3 +882,145 @@ select {
     justify-content: flex-start;
   }
 }
+
+
+/* ── Progress counter ─────────────────────────────────────── */
+.plan-progress-counter {
+  grid-column: 1 / -1;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan-progress-text {
+  font-size: 0.875rem;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.plan-progress-bar {
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.plan-progress-fill {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+/* ── Completed exercise card ─────────────────────────────── */
+.plan-card.is-completed {
+  opacity: 0.6;
+  border-color: rgba(34,197,94,0.25);
+  background: rgba(34,197,94,0.04);
+}
+
+.plan-completed-badge {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #22c55e;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Complete exercise button ────────────────────────────── */
+.button-complete-exercise {
+  margin-top: 14px;
+  width: 100%;
+  justify-content: center;
+  background: rgba(34,197,94,0.12);
+  border: 1px solid rgba(34,197,94,0.3);
+  color: #22c55e;
+}
+
+.button-complete-exercise:hover {
+  background: rgba(34,197,94,0.22);
+  border-color: rgba(34,197,94,0.5);
+}
+
+/* ── Card actions group (edit + delete stacked) ──────────── */
+.plan-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.button-edit {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.button-edit:hover {
+  background: rgba(255,255,255,0.12);
+  color: var(--text-1);
+}
+
+.button-delete-custom {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.3);
+  color: #ef4444;
+}
+
+.button-delete-custom:hover {
+  background: rgba(239,68,68,0.2);
+  border-color: rgba(239,68,68,0.5);
+}
+
+/* ── Inline edit form ────────────────────────────────────── */
+.plan-card.is-editing {
+  border-color: rgba(249,115,22,0.35);
+  background: rgba(249,115,22,0.04);
+}
+
+.plan-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.plan-edit-label {
+  width: 100%;
+}
+
+.plan-edit-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.plan-edit-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.plan-edit-actions .button {
+  flex: 1;
+  justify-content: center;
+  min-width: 100px;
+}
+
+.button-cancel {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-2);
+}
+
+.button-cancel:hover {
+  background: rgba(255,255,255,0.12);
+  color: var(--text-1);
+}
