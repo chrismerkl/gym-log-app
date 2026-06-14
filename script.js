@@ -1,5 +1,5 @@
 const STORAGE_KEYS = {
-  trainingPlanStructure: "gym-log-training-plan-structure",
+  trainingPlanStructure: "gym-log-training-plan-structure-v2",
   trainingPlanCurrentData: "gym-log-training-plan-current-data",
   trainingPlanLastData: "gym-log-training-plan-last-data",
   trainingHistory: "gym-log-training-history",
@@ -12,52 +12,52 @@ const DEFAULT_TRAINING_DAYS = [
     id: "torso-a",
     label: "Torso A",
     exercises: [
-      { name: "Nautilus Shoulder Press", sets: "3x", reps: "6-10" },
-      { name: "Chest Press flach", sets: "2x", reps: "6-10" },
-      { name: "Latzug breit", sets: "3x", reps: "6-10" },
-      { name: "Brustgestütztes Rudern Upperback", sets: "2x", reps: "6-10" },
-      { name: "Seitheben Kabel einarmig", sets: "3x", reps: "10-15" },
-      { name: "Reverse Butterfly", sets: "3x", reps: "10-15" },
-      { name: "Butterfly", sets: "2x", reps: "8-12" },
+      { name: "Nautilus Shoulder Press", sets: "3x", reps: "6-10", pause: "2-3 Min", note: "Rücken fest anlehnen, Brust leicht raus – oben nicht brutal einrasten." },
+      { name: "Chest Press flach", sets: "2x", reps: "6-10", pause: "2-3 Min", note: "Schulter nicht nach vorne kippen. Langsam ablassen, sauber drücken." },
+      { name: "Latzug breit", sets: "3x", reps: "6-10", pause: "2-3 Min", note: "Erst Schulterblätter runter, dann ziehen. Kein Reißen." },
+      { name: "Brustgestütztes Rudern Upperback", sets: "2x", reps: "6-10", pause: "2 Min", note: "Oberer Rücken, Haltung, hintere Schulter." },
+      { name: "Seitheben Kabel einarmig", sets: "3x", reps: "10-15", pause: "60-90 Sek", note: "2 Sek. hoch, kurz halten, 2-3 Sek. runter. Kein Trapez-Ziehen." },
+      { name: "Reverse Butterfly", sets: "3x", reps: "10-15", pause: "60-90 Sek", note: "Bewegung aus hinterer Schulter – nicht aus Schwung oder Nacken." },
+      { name: "Butterfly", sets: "2x", reps: "8-12", pause: "60-90 Sek", note: "Nur Brust-Finisher. Wenn müde: 1 Satz reicht." },
     ],
   },
   {
     id: "limbs-a",
     label: "Limbs A",
     exercises: [
-      { name: "Preacher Curls unilateral", sets: "3x", reps: "6-10" },
-      { name: "Trizeps Pushdown unilateral", sets: "3x", reps: "6-10" },
-      { name: "Hammer Curls", sets: "2x", reps: "8-12" },
-      { name: "Overhead-Trizeps Kabel", sets: "2x", reps: "8-12" },
-      { name: "Beinpresse", sets: "2x", reps: "6-10" },
-      { name: "Beinbeuger sitzend", sets: "3x", reps: "6-10" },
-      { name: "Waden sitzend", sets: "2x", reps: "8-12" },
+      { name: "Preacher Curls unilateral", sets: "3x", reps: "6-10", pause: "90-120 Sek", note: "Sauberer Bizepsfokus, kein Schwung." },
+      { name: "Trizeps Pushdown unilateral", sets: "3x", reps: "6-10", pause: "90-120 Sek", note: "Ellenbogen stabil, unten bewusst strecken." },
+      { name: "Hammer Curls", sets: "2x", reps: "8-12", pause: "90 Sek", note: "Brachialis und Unterarm – Arm wirkt dicker." },
+      { name: "Overhead-Trizeps Kabel", sets: "2x", reps: "8-12", pause: "90 Sek", note: "Langer Trizepskopf – sehr wichtig für Armvolumen." },
+      { name: "Beinpresse", sets: "2x", reps: "6-10", pause: "2-3 Min", note: "Kontrolliert, nicht ins Becken kippen." },
+      { name: "Beinbeuger sitzend", sets: "3x", reps: "6-10", pause: "2 Min", note: "Hamstrings sauber voll machen." },
+      { name: "Waden sitzend", sets: "2x", reps: "8-12", pause: "60-90 Sek", note: "Unten dehnen, oben kurz halten." },
     ],
   },
   {
     id: "torso-b",
     label: "Torso B",
     exercises: [
-      { name: "Latzug breit oder neutral", sets: "3x", reps: "6-10" },
-      { name: "Rudern Maschine / brustgestützt", sets: "3x", reps: "6-10" },
-      { name: "Nautilus Shoulder Press", sets: "2x", reps: "8-10" },
-      { name: "Seitheben Kabel einarmig", sets: "3x", reps: "10-15" },
-      { name: "Reverse Butterfly", sets: "3x", reps: "10-15" },
-      { name: "Chest Press leicht / Butterfly", sets: "2x", reps: "10-12" },
-      { name: "Bauchmaschine / Cable Crunch", sets: "2x", reps: "8-12" },
+      { name: "Latzug breit oder neutral", sets: "3x", reps: "6-10", pause: "2-3 Min", note: "Rückenbreite, sauberer Zug." },
+      { name: "Rudern Maschine / brustgestützt", sets: "3x", reps: "6-10", pause: "2-3 Min", note: "Rückenmitte, Kontrolle, kein Reißen." },
+      { name: "Nautilus Shoulder Press", sets: "2x", reps: "8-10", pause: "2 Min", note: "Moderater Schulterreiz – nicht maximal erzwingen." },
+      { name: "Seitheben Kabel einarmig", sets: "3x", reps: "10-15", pause: "60-90 Sek", note: "Prioritätsübung für Schulterbreite." },
+      { name: "Reverse Butterfly", sets: "3x", reps: "10-15", pause: "60-90 Sek", note: "Hintere Schulter und Haltung." },
+      { name: "Chest Press leicht / Butterfly", sets: "2x", reps: "10-12", pause: "60-90 Sek", note: "Nur Erhaltung – kein Brust-Massaker." },
+      { name: "Bauchmaschine / Cable Crunch", sets: "2x", reps: "8-12", pause: "60-90 Sek", note: "Rumpf und Optik." },
     ],
   },
   {
     id: "limbs-b",
     label: "Limbs B",
     exercises: [
-      { name: "Overhead-Trizeps Kabel", sets: "3x", reps: "8-12" },
-      { name: "Preacher Curl / Kabelcurl", sets: "3x", reps: "8-12" },
-      { name: "Trizeps Pushdown", sets: "2x", reps: "8-12" },
-      { name: "Hammer Curls", sets: "2x", reps: "8-12" },
-      { name: "Beinstrecker", sets: "2x", reps: "8-12" },
-      { name: "Beinbeuger sitzend", sets: "2x", reps: "8-12" },
-      { name: "Waden sitzend", sets: "2x", reps: "8-12" },
+      { name: "Overhead-Trizeps Kabel", sets: "3x", reps: "8-12", pause: "90-120 Sek", note: "Langer Trizepskopf zuerst." },
+      { name: "Preacher Curl / Kabelcurl", sets: "3x", reps: "8-12", pause: "90-120 Sek", note: "Bizeps sauber und kontrolliert." },
+      { name: "Trizeps Pushdown", sets: "2x", reps: "8-12", pause: "90 Sek", note: "Zusatzreiz – komplett strecken." },
+      { name: "Hammer Curls", sets: "2x", reps: "8-12", pause: "90 Sek", note: "Arm wirkt voller und stärker." },
+      { name: "Beinstrecker", sets: "2x", reps: "8-12", pause: "90-120 Sek", note: "Quad-Fokus, gute Ergänzung zur Beinpresse." },
+      { name: "Beinbeuger sitzend", sets: "2x", reps: "8-12", pause: "90-120 Sek", note: "Hamstrings erhalten." },
+      { name: "Waden sitzend", sets: "2x", reps: "8-12", pause: "60-90 Sek", note: "Langsam, volle Bewegung." },
     ],
   },
 ];
@@ -224,7 +224,7 @@ function completeExercise(dayId, exerciseName) {
   renderTrainingPlan();
 }
 
-function editPlanExercise(dayId, oldName, newName, newSets, newReps) {
+function editPlanExercise(dayId, oldName, newName, newSets, newReps, newPause, newNote) {
   const day = getTrainingDay(dayId);
 
   if (!day) {
@@ -256,7 +256,13 @@ function editPlanExercise(dayId, oldName, newName, newSets, newReps) {
       return exercise;
     }
 
-    return { name: trimmedNewName, sets: newSets, reps: trimmedNewReps };
+    return {
+      name: trimmedNewName,
+      sets: newSets,
+      reps: trimmedNewReps,
+      pause: newPause !== undefined ? newPause : (exercise.pause || ""),
+      note: newNote !== undefined ? newNote : (exercise.note || ""),
+    };
   });
 
   if (nameChanged) {
@@ -757,11 +763,13 @@ function renderTrainingPlan() {
     if (isEditing) {
       const card = document.createElement("article");
       card.className = "plan-card is-editing";
-      card.innerHTML = "<div class=\"plan-card-top\"><div class=\"plan-card-info\"><span class=\"plan-order-badge\">" + orderNum + "</span><div><p class=\"plan-exercise-name\"></p></div></div></div><div class=\"plan-edit-form\"><label class=\"field plan-edit-label\"><span>Name</span><input class=\"plan-edit-name\" type=\"text\" maxlength=\"60\"></label><div class=\"plan-edit-fields\"><label class=\"field\"><span>Sätze</span><select class=\"plan-edit-sets\"><option value=\"2x\">2x</option><option value=\"3x\">3x</option></select></label><label class=\"field\"><span>Wdh.-Bereich</span><input class=\"plan-edit-reps\" type=\"text\" maxlength=\"10\"></label></div><div class=\"plan-edit-actions\"><button type=\"button\" class=\"button button-primary plan-edit-save-button\"><span>Speichern</span></button><button type=\"button\" class=\"button button-cancel plan-edit-cancel-button\"><span>Abbrechen</span></button></div></div>";
+      card.innerHTML = "<div class=\"plan-card-top\"><div class=\"plan-card-info\"><span class=\"plan-order-badge\">" + orderNum + "</span><div><p class=\"plan-exercise-name\"></p></div></div></div><div class=\"plan-edit-form\"><label class=\"field plan-edit-label\"><span>Name</span><input class=\"plan-edit-name\" type=\"text\" maxlength=\"60\"></label><div class=\"plan-edit-fields\"><label class=\"field\"><span>Sätze</span><select class=\"plan-edit-sets\"><option value=\"2x\">2x</option><option value=\"3x\">3x</option></select></label><label class=\"field\"><span>Wdh.-Bereich</span><input class=\"plan-edit-reps\" type=\"text\" maxlength=\"10\"></label><label class=\"field\"><span>Pause</span><input class=\"plan-edit-pause\" type=\"text\" maxlength=\"20\" placeholder=\"z. B. 90 Sek\"></label></div><label class=\"field\"><span>Notiz / Cue</span><input class=\"plan-edit-note\" type=\"text\" maxlength=\"140\" placeholder=\"Technik-Hinweis...\"></label><div class=\"plan-edit-actions\"><button type=\"button\" class=\"button button-primary plan-edit-save-button\"><span>Speichern</span></button><button type=\"button\" class=\"button button-cancel plan-edit-cancel-button\"><span>Abbrechen</span></button></div></div>";
       card.querySelector(".plan-exercise-name").textContent = exercise.name;
       card.querySelector(".plan-edit-name").value = exercise.name;
       card.querySelector(".plan-edit-sets").value = exercise.sets;
       card.querySelector(".plan-edit-reps").value = exercise.reps;
+      card.querySelector(".plan-edit-pause").value = exercise.pause || "";
+      card.querySelector(".plan-edit-note").value = exercise.note || "";
       card.querySelector(".plan-edit-save-button").dataset.day = activeDay.id;
       card.querySelector(".plan-edit-save-button").dataset.exercise = exercise.name;
       planExercises.append(card);
@@ -791,10 +799,24 @@ function renderTrainingPlan() {
       ? "<path d=\"M20 11a8 8 0 1 1-2.34-5.66\"></path><path d=\"M20 4v7h-7\"></path>"
       : "<path d=\"M3 6h18\"></path><path d=\"M19 6l-1 14H6L5 6\"></path><path d=\"M8 6V4h8v2\"></path>";
 
-    card.innerHTML = "<div class=\"plan-card-top\"><div class=\"plan-card-info\"><span class=\"plan-order-badge\">" + orderNum + "</span><div><p class=\"plan-exercise-name\"></p><p class=\"plan-prescription\"></p></div></div><div class=\"plan-card-actions\"><button type=\"button\" class=\"button button-edit\"><span class=\"button-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\"><path d=\"M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7\"></path><path d=\"M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z\"></path></svg></span><span>Bearbeiten</span></button><button class=\"" + deleteClass + "\" title=\"\" aria-label=\"\"><span class=\"button-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\">" + deleteSvgPaths + "</svg></span><span></span></button></div></div><div class=\"plan-set-list\"></div><div class=\"plan-history\"></div><div class=\"plan-chart-section\"><p class=\"plan-chart-title\">Verlauf</p><div class=\"plan-chart-wrapper\"><canvas class=\"plan-chart\"></canvas></div></div>";
+    card.innerHTML = "<div class=\"plan-card-top\"><div class=\"plan-card-info\"><span class=\"plan-order-badge\">" + orderNum + "</span><div><p class=\"plan-exercise-name\"></p><div class=\"plan-meta-row\"><p class=\"plan-prescription\"></p><span class=\"plan-pause-badge\"></span></div><p class=\"plan-note\"></p></div></div><div class=\"plan-card-actions\"><button type=\"button\" class=\"button button-edit\"><span class=\"button-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\"><path d=\"M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7\"></path><path d=\"M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z\"></path></svg></span><span>Bearbeiten</span></button><button class=\"" + deleteClass + "\" title=\"\" aria-label=\"\"><span class=\"button-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\">" + deleteSvgPaths + "</svg></span><span></span></button></div></div><div class=\"plan-set-list\"></div><div class=\"plan-history\"></div><div class=\"plan-chart-section\"><p class=\"plan-chart-title\">Verlauf</p><div class=\"plan-chart-wrapper\"><canvas class=\"plan-chart\"></canvas></div></div>";
 
     card.querySelector(".plan-exercise-name").textContent = exercise.name;
-    card.querySelector(".plan-prescription").textContent = exercise.sets + " " + exercise.reps;
+    card.querySelector(".plan-prescription").textContent = exercise.sets + " × " + exercise.reps;
+
+    const pauseBadgeEl = card.querySelector(".plan-pause-badge");
+    if (exercise.pause) {
+      pauseBadgeEl.textContent = "⏱ " + exercise.pause;
+    } else {
+      pauseBadgeEl.style.display = "none";
+    }
+
+    const noteEl = card.querySelector(".plan-note");
+    if (exercise.note) {
+      noteEl.textContent = exercise.note;
+    } else {
+      noteEl.style.display = "none";
+    }
 
     const editBtn = card.querySelector(".button-edit");
     editBtn.dataset.day = activeDay.id;
@@ -1105,7 +1127,9 @@ planExercises.addEventListener("click", (event) => {
     const newName = card.querySelector(".plan-edit-name").value;
     const newSets = card.querySelector(".plan-edit-sets").value;
     const newReps = card.querySelector(".plan-edit-reps").value;
-    editPlanExercise(saveEditButton.dataset.day, saveEditButton.dataset.exercise, newName, newSets, newReps);
+    const newPause = card.querySelector(".plan-edit-pause")?.value ?? "";
+    const newNote = card.querySelector(".plan-edit-note")?.value ?? "";
+    editPlanExercise(saveEditButton.dataset.day, saveEditButton.dataset.exercise, newName, newSets, newReps, newPause, newNote);
     return;
   }
 
